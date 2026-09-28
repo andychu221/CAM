@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Credit Request Management</title>
+    <title>Credit Approval Management</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -19,6 +18,9 @@
     <!-- File Parsing Libraries for Real Preview -->
     <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.2/mammoth.browser.min.js"></script>
+    <!-- TinyMCE (One-Pager) + HTML->DOCX export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tinymce/6.8.3/tinymce.min.js" referrerpolicy="origin"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.js"></script>
 
     <!-- Icons & Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Material+Icons" />
@@ -74,11 +76,17 @@
         /* --- Header --- */
         .top-nav {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
+            flex-direction: column;
             padding-top: 10px;
             margin-bottom: 0;
             flex-shrink: 0;
+        }
+
+        .top-nav-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
         .brand {
@@ -88,7 +96,6 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            margin-bottom: 8px;
             margin-right: 40px;
         }
         .brand-icon {
@@ -182,7 +189,6 @@
             display: flex;
             align-items: center;
             gap: 15px;
-            margin-bottom: 8px;
         }
 
         .settings-btn {
@@ -504,6 +510,7 @@
             border: 1px solid #d1d5db;
             margin-bottom: 20px;
             border-radius: 4px;
+            overflow: hidden;
         }
         .paper-section-header {
             background: #f3f4f6;
@@ -513,7 +520,6 @@
             font-size: 0.9rem;
             color: #374151;
             text-transform: capitalize;
-			border-radius: 4px 4px 0 0;
         }
         
         .paper-grid-2 { display: grid; grid-template-columns: 1fr 1fr; }
@@ -827,6 +833,56 @@
         .draggable-item { cursor: move; }
         .draggable-item.dragging { opacity: 0.5; background: #e0f2fe; }
 
+        /* --- Dashboard List --- */
+        .dash-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:16px}
+        .stat-card{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;box-shadow:var(--shadow-sm)}
+        .stat-card.clickable{cursor:pointer}.stat-card.clickable:hover{box-shadow:var(--shadow-md)}
+        .stat-card.active{background:#fefce8;outline:2px solid var(--primary-color)}
+        .stat-label{font-size:.75rem;color:#6b7280;font-weight:600}.stat-value{font-size:1.6rem;font-weight:800;line-height:1.3}.stat-sub{font-size:.7rem;color:#9ca3af}
+        .dash-toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+        .dash-toolbar input[type=text],.dash-toolbar select{border:1px solid #d1d5db;border-radius:6px;padding:6px 10px;font-size:.85rem;background:#fff}
+        .dash-charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:16px;margin-top:20px}
+        .todo-table-wrap{max-height:460px;overflow:auto}
+        .todo-table-wrap table thead th{position:sticky;top:0;z-index:5;box-shadow:0 1px 0 #e5e7eb}
+
+        /* Dashboard: upcoming review calendar */
+        .chart-panel{background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:14px}
+        .chart-box{position:relative;height:260px}
+        .week-cal-box{height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+        .week-cal-label{font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.03em;margin-bottom:4px;position:sticky;top:0;background:#fff;padding-bottom:2px}
+        .week-cal-list{display:flex;flex-direction:column;gap:4px}
+        .week-cal-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;background:#f9fafb;cursor:pointer;font-size:12px;transition:background .15s}
+        .week-cal-item:hover{background:#eef2ff}
+        .week-cal-tag{background:#dbeafe;color:#1d4ed8;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap}
+        .week-cal-name{flex:1;color:#374151;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .week-cal-date{color:#9ca3af;font-size:11px;white-space:nowrap}
+        .week-cal-empty{font-size:12px;color:#9ca3af;padding:4px 8px}
+        .dash-link{color:#2563eb;font-weight:700;cursor:pointer}.dash-link:hover{text-decoration:underline}
+        .data-table tr.mine-row td{background:#fffbeb}
+        .dash-truncate{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;max-width:100%;}
+        /* Generic resizable column handle, reused across all data-table lists */
+        .data-table th .col-resizer{position:absolute;top:0;right:0;width:6px;cursor:col-resize;height:100%;z-index:10;background:transparent;border-right:2px solid transparent;}
+        .data-table th .col-resizer:hover{border-right-color:#3b82f6;}
+
+        /* One-Pager (TinyMCE) */
+        .tox-tinymce { border-radius: 6px !important; }
+        #summary-print { display: none; }
+        .summary-actions { display:flex; gap:8px; justify-content:flex-end; margin-bottom:10px; }
+        /* Non-editors (i.e. anyone who isn't the Reviewer at their step) shouldn't see an editing toolbar at all */
+        .tox-tinymce.onepager-readonly .tox-editor-header { display: none !important; }
+
+        /* Power-BI style dual-range slicers (History filters) */
+        .pbi-slicer { min-width: 190px; }
+        .pbi-slicer-track-wrap { position: relative; height: 28px; }
+        .pbi-slicer-track { position: absolute; top: 12px; left: 0; right: 0; height: 4px; background: #e5e7eb; border-radius: 2px; }
+        .pbi-slicer-range { position: absolute; top: 12px; height: 4px; background: #2563eb; border-radius: 2px; }
+        .pbi-slicer-track-wrap input[type=range] { position: absolute; top: 0; left: 0; width: 100%; height: 28px; margin: 0; background: transparent; -webkit-appearance: none; pointer-events: none; }
+        .pbi-slicer-track-wrap input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #2563eb; border: 2px solid #fff; box-shadow: 0 0 0 1px #2563eb; cursor: pointer; margin-top: 7px; }
+        .pbi-slicer-track-wrap input[type=range]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: #2563eb; border: 2px solid #fff; box-shadow: 0 0 0 1px #2563eb; cursor: pointer; }
+        .pbi-slicer-track-wrap input[type=range]::-webkit-slider-runnable-track { background: transparent; }
+        .pbi-slicer-track-wrap input[type=range]::-moz-range-track { background: transparent; }
+        .pbi-slicer-labels { display: flex; justify-content: space-between; font-size: 11px; color: #6b7280; margin-top: 2px; }
+
         /* Print Styles */
         @media print {
             @page { size: auto; margin: 10mm; }
@@ -847,6 +903,8 @@
             .paper-label { width: 120px; padding: 4px 8px; font-size: 0.8rem; }
             .paper-value { padding: 4px 8px; font-size: 0.8rem; }
             .paper-editor { min-height: auto; padding: 5px; }
+            #pane-summary .tox-tinymce, #pane-summary .summary-actions { display: none !important; }
+            #pane-summary #summary-print { display: block !important; }
             input, select { border: none !important; appearance: none; padding: 0; background: transparent !important; }
             
         }
@@ -857,39 +915,81 @@
 
 <div class="app-container">
     <header class="top-nav">
-        <div class="brand">
-            <div class="brand-icon"><span class="material-icons">assignment</span></div>
-            <span>Credit Request Management</span>
-        </div>
-        
-        <div class="nav-tabs" id="main-nav">
-            <!-- Populated via JS -->
-        </div>
-
-        <div class="user-area-wrapper">
-            <!-- Settings Icon -->
-            <div class="settings-btn" onclick="openSettingsModal()" title="Workflow Settings">
-                <span class="material-icons">settings</span>
+        <div class="top-nav-row">
+            <div class="brand">
+                <div class="brand-icon"><span class="material-icons">assignment</span></div>
+                <span>Credit Approval Management</span>
             </div>
 
-            <div class="user-container">
-                <div class="avatar" id="current-user-avatar" onclick="toggleUserMenu(event)">M</div>
-                <div class="role-badge" id="current-user-role">Maker</div>
-                <div class="dropdown-menu" id="user-menu">
-                    <!-- Populated via JS -->
+            <div class="user-area-wrapper">
+                <!-- Settings Icon -->
+                <div class="settings-btn" onclick="openSettingsModal()" title="Workflow Settings">
+                    <span class="material-icons">settings</span>
+                </div>
+
+                <div class="user-container">
+                    <div class="avatar" id="current-user-avatar" onclick="toggleUserMenu(event)">M</div>
+                    <div class="role-badge" id="current-user-role">Maker</div>
+                    <div class="dropdown-menu" id="user-menu">
+                        <!-- Populated via JS -->
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <div class="nav-tabs" id="main-nav">
+            <!-- Populated via JS -->
         </div>
     </header>
 
     <main id="main-content">
         
         <div id="view-dashboard" class="view-section active">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-bold text-gray-800" id="dashboard-greeting">Active Requests</h2>
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-gray-800" id="dashboard-greeting">Dashboard</h2>
+                <button id="btn-new-request" class="btn btn-primary" style="display:none;" onclick="createNewRequest()"><span class="material-icons">add</span> New Request</button>
             </div>
-            <div class="notebook-grid" id="notebook-container">
-                <!-- Populated via JS -->
+            <div id="dash-stats" class="dash-stats"></div>
+            <h3 class="text-lg font-bold text-gray-800 mt-2 mb-2">Active Requests</h3>
+            <div class="dash-toolbar">
+                <select id="dash-search" style="width:160px;" onchange="dashFilterChanged()"><option value="">All Tickers</option></select>
+                <select id="dash-status" onchange="dashFilterChanged()">
+                    <option value="">All Statuses</option><option value="Draft">Draft</option><option value="Pending">Pending</option>
+                    <option value="Returned+Recalled">Returned / Recalled</option>
+                    <option value="Rejected">Rejected</option>
+                </select>
+                <select id="dash-purpose" onchange="dashFilterChanged()"></select>
+                <label class="text-sm text-gray-600 flex items-center gap-1 cursor-pointer" id="dash-mine-wrap"><input type="checkbox" id="dash-mine" onchange="dashFilterChanged()"> Only my action</label>
+                <button class="btn btn-ghost btn-sm" onclick="dashReset()">Reset</button>
+                <span class="text-xs text-gray-400 ml-auto" id="dash-count"></span>
+            </div>
+            <div class="bg-white rounded shadow-sm border border-gray-200 todo-table-wrap">
+                <table class="data-table" id="dash-table">
+                    <thead id="dash-thead"></thead><tbody id="dash-tbody"></tbody></table>
+            </div>
+            <div class="dash-charts" id="dash-charts-row">
+                <div class="chart-panel"><div class="text-sm font-bold text-gray-600 mb-2">New Requests per Month <span class="text-xs font-normal text-gray-400">(by create date)</span></div><div class="chart-box"><canvas id="dash-chart-monthly"></canvas></div></div>
+                <div class="chart-panel">
+                    <div class="text-sm font-bold text-gray-600 mb-2">Upcoming Reviews</div>
+                    <div class="week-cal-box">
+                        <div>
+                            <div class="week-cal-label">This Week</div>
+                            <div class="week-cal-list" id="week-cal-thisweek"></div>
+                        </div>
+                        <div>
+                            <div class="week-cal-label">Next Week</div>
+                            <div class="week-cal-list" id="week-cal-nextweek"></div>
+                        </div>
+                        <div>
+                            <div class="week-cal-label">In 2 Weeks</div>
+                            <div class="week-cal-list" id="week-cal-in2weeks"></div>
+                        </div>
+                        <div>
+                            <div class="week-cal-label">In 3 Weeks</div>
+                            <div class="week-cal-list" id="week-cal-in3weeks"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -945,27 +1045,12 @@
                                     <div class="paper-field-row">
                                         <div class="paper-label">Type</div>
                                         <div class="paper-value">
-                                            <div class="multi-select-dropdown w-full" id="purpose-selector" onclick="event.stopPropagation()">
-                                                <button class="dropdown-btn w-full" id="btn-purpose-dropdown" onclick="togglePurposeDropdown()">
-                                                    <span id="purpose-display" class="break-words whitespace-normal self-start mt-1 flex-1 text-left mr-2truncate flex-1 text-left mr-2">Select Purpose</span>
-                                                    <span class="material-icons text-sm flex-shrink-0">arrow_drop_down</span>
-                                                </button>
-                                                <div class="dropdown-content w-full flex-col" id="purpose-dropdown-content">
-                                                     <div class="dropdown-item-check" onclick="togglePurpose('New Credit Line', this)">
-                                                        <span class="material-icons text-sm">check_box_outline_blank</span> New Credit Line
-                                                     </div>
-                                                     <div class="dropdown-item-check" onclick="togglePurpose('Credit Line Change', this)">
-                                                        <span class="material-icons text-sm">check_box_outline_blank</span> Credit Line Change
-                                                     </div>
-                                                     <div class="dropdown-item-check" onclick="togglePurpose('Payment Term Change', this)">
-                                                        <span class="material-icons text-sm">check_box_outline_blank</span> Payment Term Change
-                                                     </div>
-                                                     <div class="dropdown-item-check" onclick="togglePurpose('Add New Entity to Share', this)">
-                                                        <span class="material-icons text-sm">check_box_outline_blank</span> Add New Entity to Share
-                                                     </div>
-                                                </div>
-                                            </div>
-                                            <input type="hidden" id="frm-purpose">
+                                            <select id="frm-purpose" onchange="handlePurposeChange()">
+                                                <option value="New Credit Line">New Credit Line</option>
+                                                <option value="Credit Line Change">Credit Line Change</option>
+                                                <option value="Payment Term Change">Payment Term Change</option>
+                                                <option value="Add New Entity to Share">Add New Entity to Share</option>
+                                            </select>
                                         </div>
                                     </div>
 									<div class="paper-field-row">
@@ -1184,7 +1269,7 @@
                                 <div class="mb-2 px-1">
                                     <input type="text" id="rev-risk-subtitle" 
                                            class="text-sm text-black bg-transparent border-none w-full max-w-md focus:outline-none font-normal" 
-                                           placeholder="Financials as of FYXX ended MM/DD/2025">
+                                           placeholder="Financials as of FYXX ended MM/DD/2026">
                                 </div>
 								
                                 <div class="paper-section" id="risk-analysis-block">
@@ -1241,10 +1326,13 @@
                         <div id="pane-summary" class="internal-pane">
                              <div class="paper-form">
                                 <div class="paper-form-title">Credit Summary</div>
-                                <div id="wrapper-summary" class="editor-wrapper">
-                                    <div class="editor-expand-btn" onclick="openExpandedEditor('wrapper-summary')"><span class="material-icons">open_in_full</span></div>
-                                    <div id="editor-summary" class="paper-editor" style="min-height: 600px;"></div>
+                                <div class="summary-actions">
+                                    <button class="btn btn-ghost btn-sm" id="btn-summary-import" onclick="document.getElementById('summary-docx-input').click()"><span class="material-icons text-sm">upload_file</span> Upload .docx</button>
+                                    <button class="btn btn-ghost btn-sm" onclick="exportSummaryDocx()"><span class="material-icons text-sm">download</span> Export .docx</button>
+                                    <input type="file" id="summary-docx-input" accept=".docx" style="display:none;" onchange="importSummaryDocx(this)">
                                 </div>
+                                <textarea id="editor-summary"></textarea>
+                                <div id="summary-print"></div>
                             </div>
                         </div>
 
@@ -1449,21 +1537,44 @@
             <div class="flex justify-between mb-4">
                 <h2 class="text-xl font-bold">Customer Master Database</h2>
             </div>
-            <div class="bg-white rounded shadow-sm overflow-hidden border border-gray-200 overflow-x-auto">
-                <table class="data-table">
+            <div class="bg-white p-3 rounded shadow-sm border border-gray-200 mb-4">
+                <div class="flex flex-wrap gap-3 items-end">
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Ticker</label>
+                        <select id="cust-filter-q" class="border rounded p-2 text-sm w-32" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Region</label>
+                        <select id="cust-filter-region" class="border rounded p-2 text-sm w-32" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Sector</label>
+                        <select id="cust-filter-sector" class="border rounded p-2 text-sm w-36" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Domain</label>
+                        <select id="cust-filter-domain" class="border rounded p-2 text-sm w-40" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Account Manager</label>
+                        <select id="cust-filter-am" class="border rounded p-2 text-sm w-36" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Rating</label>
+                        <select id="cust-filter-rating" class="border rounded p-2 text-sm w-24" onchange="renderCustomerMaster()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Utilization</label>
+                        <select id="cust-filter-util" class="border rounded p-2 text-sm w-36" onchange="renderCustomerMaster()">
+                            <option value="">All</option><option value="high">High (&gt;75%)</option><option value="mid">Moderate (25\u201375%)</option><option value="low">Low (&lt;25%)</option></select></div>
+                    <div class="ml-auto">
+                        <button class="btn btn-ghost btn-sm" onclick="resetCustomerFilters()"><span class="material-icons text-sm">restart_alt</span> Reset</button>
+                    </div>
+                </div>
+                <div class="text-xs text-gray-400 mt-2" id="cust-count"></div>
+            </div>
+            <div class="bg-white rounded shadow-sm border border-gray-200 todo-table-wrap">
+                <table class="data-table" id="customer-master-table">
                     <thead>
                         <tr>
-                            <th onclick="sortCustomerMaster('id')">Ticker <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('name')">Name <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('family')">Family <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('region')">Region <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('sector')">Sector <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('domain')">Domain <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('am')">Account Manager <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('creditLine')">Credit Line <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('ar')">A/R Bal <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('util')">Util % <span class="material-icons text-sm align-middle">unfold_more</span></th>
-                            <th onclick="sortCustomerMaster('lastRev')">Last Review <span class="material-icons text-sm align-middle">unfold_more</span></th>
+                            <th onclick="sortCustomerMaster('id')">Ticker <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('name')">Name <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('family')">Family <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('region')">Region <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('sector')">Sector <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('domain')">Domain <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('am')">Account Manager <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('creditLine')">Credit Line <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('ar')">A/R Bal <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('util')">Util % <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
+                            <th onclick="sortCustomerMaster('lastRev')">Last Review <span class="material-icons text-sm align-middle">unfold_more</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>
                         </tr>
                     </thead>
                     <tbody id="master-table-body"></tbody>
@@ -1472,38 +1583,39 @@
         </div>
 
         <div id="view-historical" class="view-section">
-            <h2 class="text-xl font-bold mb-4">Application History</h2>
-            <!-- History Content -->
-            <div class="flex flex-wrap gap-4 mb-4 bg-white p-3 rounded shadow-sm border border-gray-200 items-end">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">Ticker</label>
-                    <input type="text" id="hist-filter-ticker" class="border rounded p-2 text-sm w-32" placeholder="Search..." oninput="renderHistorical()">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <button id="hist-back-btn" class="btn btn-ghost btn-sm" style="display:none" onclick="historicalBack()"><span class="material-icons text-sm">arrow_back</span> Back</button>
+                Completed Cases <span class="text-sm font-normal text-gray-400">(approved &amp; in effect)</span>
+            </h2>
+            <div class="bg-white p-3 rounded shadow-sm border border-gray-200 mb-4">
+                <div class="flex flex-wrap gap-3 items-end">
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Ticker</label>
+                        <select id="hist-filter-ticker" class="border rounded p-2 text-sm w-32" onchange="renderHistorical()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Purpose</label>
+                        <select id="hist-filter-purpose" class="border rounded p-2 text-sm w-44" onchange="renderHistorical()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Approve by</label>
+                        <select id="hist-filter-approver" class="border rounded p-2 text-sm w-36" onchange="renderHistorical()"></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Limit Change</label>
+                        <select id="hist-filter-delta" class="border rounded p-2 text-sm w-32" onchange="renderHistorical()">
+                            <option value="">All</option><option value="up">Increase</option><option value="down">Decrease</option><option value="none">No change</option></select></div>
+                    <div><label class="block text-xs font-bold text-gray-500 mb-1">Approve Date</label>
+                        <div class="flex items-center gap-1">
+                            <input type="date" id="hist-filter-date-from" class="border rounded p-2 text-sm" onchange="renderHistorical()">
+                            <span class="text-gray-400 text-xs">to</span>
+                            <input type="date" id="hist-filter-date-to" class="border rounded p-2 text-sm" onchange="renderHistorical()">
+                        </div>
+                    </div>
+                    <div class="ml-auto flex gap-2">
+                        <button class="btn btn-ghost btn-sm" onclick="resetHistoricalFilters()"><span class="material-icons text-sm">restart_alt</span> Reset</button>
+                        <button class="btn btn-ghost btn-sm" onclick="openColumnConfig()"><span class="material-icons text-sm">view_column</span> Columns</button>
+                        <button class="btn btn-ghost btn-sm" onclick="copyHistoricalToClipboard()"><span class="material-icons text-sm">content_copy</span> Copy</button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">Purpose</label>
-                    <select id="hist-filter-purpose" class="border rounded p-2 text-sm w-40" onchange="renderHistorical()">
-                        <option value="">All</option>
-                        <option value="New Credit Line">New Credit Line</option>
-                        <option value="Credit Line Change">Credit Line Change</option>
-                    </select>
-                </div>
-                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">Status</label>
-                    <select id="hist-filter-status" class="border rounded p-2 text-sm w-32" onchange="renderHistorical()">
-                        <option value="">All</option>
-                        <option value="Approved">Approved</option>
-                        <option value="Rejected">Rejected</option>
-                        <option value="Cancelled">Cancelled</option>
-                    </select>
-                </div>
-                <div class="ml-auto flex gap-2">
-                     <button class="btn btn-ghost btn-sm" onclick="openColumnConfig()"><span class="material-icons text-sm">view_column</span> Columns</button>
-                     <button class="btn btn-ghost btn-sm" onclick="copyHistoricalToClipboard()"><span class="material-icons text-sm">content_copy</span> Copy</button>
-                </div>
+                <div class="text-xs text-gray-400 mt-2" id="hist-count"></div>
             </div>
 
-            <div class="bg-white rounded shadow-sm overflow-hidden border border-gray-200">
-                <table class="data-table">
+            <div class="bg-white rounded shadow-sm border border-gray-200 todo-table-wrap">
+                <table class="data-table" id="historical-table">
                     <thead id="historical-thead"></thead>
                     <tbody id="historical-list"></tbody>
                 </table>
@@ -1531,6 +1643,21 @@
             <button class="btn btn-ghost btn-sm" onclick="closeNewsPopup(null)"><span class="material-icons">close</span></button>
         </div>
         <div id="popup-news-body" class="overflow-y-auto flex-1"></div>
+    </div>
+</div>
+
+
+<!-- Condition Detail Modal -->
+<div class="modal-overlay" id="condition-modal" onclick="closeConditionModal(event)">
+    <div class="modal-box" style="width: 460px; max-width: 90%;" onclick="event.stopPropagation()">
+        <div class="flex justify-between items-start mb-3 border-b pb-2">
+            <div>
+                <div class="font-bold text-lg" id="condition-modal-title">Conditions</div>
+                <div class="text-xs text-gray-500" id="condition-modal-sub"></div>
+            </div>
+            <button class="btn btn-ghost btn-sm" onclick="closeConditionModal(null)"><span class="material-icons">close</span></button>
+        </div>
+        <div id="condition-modal-body" style="max-height: 50vh; overflow-y: auto;"></div>
     </div>
 </div>
 
@@ -1622,12 +1749,12 @@
         { id: '3001', name: 'Elon Musk', role: 'Approver', avatar: 'EM' },
         { id: '4001', name: 'Satya Nadella', role: 'Manager', avatar: 'SN' },
         { id: '5001', name: 'Andy Jassy', role: 'CFO', avatar: 'AJ' },
-        { id: '6001', name: 'Sundar Pichai', role: 'CEO', avatar: 'SP' },
-        { id: '7001', name: 'Mark Zuckerberg', role: 'Reviewer', avatar: 'MZ' },
+        { id: '6001', name: 'Sundar Pichai', role: 'CEO', avatar: 'SP' }
     ];
     let currentUser = USERS[0];
     let previousView = 'dashboard'; 
     let sourceView = 'dashboard';
+    let historicalReturnTo = null; // set right before navTo('historical') when arriving via the "Approved" stat card, so a Back button can return the user there
     let workflowEditMode = false;
     let editingStepIndex = -1;
 
@@ -1642,14 +1769,27 @@
     
     // Updated CUSTOMER_DB with shares for approx calculation
     const CUSTOMER_DB = {
-        'AAPL': { name: 'Apple Inc.', family: 'Apple Grp', region: 'NAM', sector: 'Consumer', domain: 'Technology', am: 'John Sales', creditLine: 50000000, ar: 1200000, util: 2.4, lastRev: '2024-05-01', nextRev: '2025-05-01', id: 'CUST-001', rating: 'AAA', est: '1976', payTerm: 'Net 60', intRating: 'IG1', listed: true, shares: 15.3e9 },
-        'NVDA': { name: 'Nvidia Corp.', family: 'Nvidia Grp', region: 'NAM', sector: 'Enterprise', domain: 'Semiconductors', am: 'Sarah Chip', creditLine: 20000000, ar: 15000000, util: 75.0, lastRev: '2024-06-15', nextRev: '2025-06-15', id: 'CUST-002', rating: 'AA+', est: '1993', payTerm: 'Net 45', intRating: 'IG2', listed: true, shares: 2.46e9 },
-        'TSLA': { name: 'Tesla Inc.', family: 'Tesla Grp', region: 'NAM', sector: 'Auto', domain: 'Automotive', am: 'Mike Car', creditLine: 15000000, ar: 8000000, util: 53.3, lastRev: '2024-04-10', nextRev: '2025-04-10', id: 'CUST-003', rating: 'BBB', est: '2003', payTerm: 'Net 30', intRating: 'IG4', listed: true, shares: 3.19e9 },
-        'MSFT': { name: 'Microsoft Corp.', family: 'MSFT Grp', region: 'NAM', sector: 'Enterprise', domain: 'Technology', am: 'Bill Gates', creditLine: 80000000, ar: 500000, util: 0.6, lastRev: '2024-02-20', nextRev: '2025-02-20', id: 'CUST-004', rating: 'AAA', est: '1975', payTerm: 'Net 60', intRating: 'IG1', listed: true, shares: 7.43e9 },
-        'AMZN': { name: 'Amazon.com Inc.', family: 'Amazon Grp', region: 'NAM', sector: 'Consumer', domain: 'E-commerce', am: 'Jeff B', creditLine: 60000000, ar: 30000000, util: 50.0, lastRev: '2024-03-01', nextRev: '2025-03-01', id: 'CUST-005', rating: 'AA', est: '1994', payTerm: 'Net 45', intRating: 'IG2', listed: true, shares: 10.4e9 },
-        'GOOGL': { name: 'Alphabet Inc.', family: 'Google Grp', region: 'NAM', sector: 'Internet', domain: 'Technology', am: 'Larry P', creditLine: 55000000, ar: 1000000, util: 1.8, lastRev: '2024-05-15', nextRev: '2025-05-15', id: 'CUST-006', rating: 'AA+', est: '1998', payTerm: 'Net 60', intRating: 'IG2', listed: true, shares: 12.3e9 },
-        'META': { name: 'Meta Platforms', family: 'Meta Grp', region: 'NAM', sector: 'Internet', domain: 'Social Media', am: 'Mark Z', creditLine: 30000000, ar: 29000000, util: 96.6, lastRev: '2024-01-10', nextRev: '2025-01-10', id: 'CUST-007', rating: 'A+', est: '2004', payTerm: 'Net 30', intRating: 'IG3', listed: true, shares: 2.54e9 }
+        'AAPL': { name: 'Apple Inc.', family: 'Apple Grp', region: 'NAM', sector: 'Consumer', domain: 'Technology', am: 'John Sales', creditLine: 50000000, ar: 1200000, util: 2.4, lastRev: '2025-05-01', nextRev: '2026-05-01', id: 'CUST-001', rating: 'AAA', est: '1976', payTerm: 'Net 60', intRating: 'IG1', listed: true, shares: 15.3e9 },
+        'NVDA': { name: 'Nvidia Corp.', family: 'Nvidia Grp', region: 'NAM', sector: 'Enterprise', domain: 'Semiconductors', am: 'Sarah Chip', creditLine: 20000000, ar: 15000000, util: 75.0, lastRev: '2025-06-15', nextRev: '2026-06-15', id: 'CUST-002', rating: 'AA+', est: '1993', payTerm: 'Net 45', intRating: 'IG2', listed: true, shares: 2.46e9 },
+        'TSLA': { name: 'Tesla Inc.', family: 'Tesla Grp', region: 'NAM', sector: 'Auto', domain: 'Automotive', am: 'Mike Car', creditLine: 15000000, ar: 8000000, util: 53.3, lastRev: '2025-04-10', nextRev: '2026-04-10', id: 'CUST-003', rating: 'BBB', est: '2003', payTerm: 'Net 30', intRating: 'IG4', listed: true, shares: 3.19e9 },
+        'MSFT': { name: 'Microsoft Corp.', family: 'MSFT Grp', region: 'NAM', sector: 'Enterprise', domain: 'Technology', am: 'Bill Gates', creditLine: 80000000, ar: 500000, util: 0.6, lastRev: '2025-02-20', nextRev: '2026-02-20', id: 'CUST-004', rating: 'AAA', est: '1975', payTerm: 'Net 60', intRating: 'IG1', listed: true, shares: 7.43e9 },
+        'AMZN': { name: 'Amazon.com Inc.', family: 'Amazon Grp', region: 'NAM', sector: 'Consumer', domain: 'E-commerce', am: 'Jeff B', creditLine: 60000000, ar: 30000000, util: 50.0, lastRev: '2025-03-01', nextRev: '2026-03-01', id: 'CUST-005', rating: 'AA', est: '1994', payTerm: 'Net 45', intRating: 'IG2', listed: true, shares: 10.4e9 },
+        'GOOGL': { name: 'Alphabet Inc.', family: 'Google Grp', region: 'NAM', sector: 'Internet', domain: 'Technology', am: 'Larry P', creditLine: 55000000, ar: 1000000, util: 1.8, lastRev: '2025-05-15', nextRev: '2026-05-15', id: 'CUST-006', rating: 'AA+', est: '1998', payTerm: 'Net 60', intRating: 'IG2', listed: true, shares: 12.3e9 },
+        'META': { name: 'Meta Platforms', family: 'Meta Grp', region: 'NAM', sector: 'Internet', domain: 'Social Media', am: 'Mark Z', creditLine: 30000000, ar: 29000000, util: 96.6, lastRev: '2025-01-10', nextRev: '2026-01-10', id: 'CUST-007', rating: 'A+', est: '2004', payTerm: 'Net 30', intRating: 'IG3', listed: true, shares: 2.54e9 }
     };
+
+    // Spread each customer's next review across the upcoming month (relative to "today") so the
+    // dashboard review calendar has realistic, current data to show.
+    (function seedUpcomingReviews() {
+        const today = new Date();
+        Object.keys(CUSTOMER_DB).forEach((ticker, i) => {
+            const c = CUSTOMER_DB[ticker];
+            const next = new Date(today); next.setDate(next.getDate() + 3 + i * 4);
+            const last = new Date(next); last.setFullYear(last.getFullYear() - 1);
+            c.nextRev = next.toISOString().slice(0, 10);
+            c.lastRev = last.toISOString().slice(0, 10);
+        });
+    })();
 
     const TICKER_DOMAINS = {
         'AAPL': 'apple.com',
@@ -1661,62 +1801,109 @@
         'META': 'meta.com'
     };
 
-    let requests = [
-        {
-            id: 'REQ-2025-001', ticker: 'AAPL', name: 'Apple Inc.', status: 'Approved', stepIndex: 5,
-            currLimit: 50000000, propLimit: 60000000, purpose: 'Credit Line Change', date: '2025-01-15',
-            forecast: 'Q3 Orders expected to rise 20%.', bizDesc: 'Major partner for mobile chipsets.',
-            risks: 'Concentration risk high.', mitigants: 'Cash rich entity.', recommendation: 'Approve.',
-            files: [],
-            finConfig: null, 
-            finPeriods: [],
-            history: [
-                { role: 'Maker', user: 'Tim Cook', status: 'Approved', date: '2025-01-15 09:00' },
-                { role: 'Reviewer', user: 'Jensen Huang', status: 'Approved', date: '2025-01-15 11:00' },
-                { role: 'Approver', user: 'Elon Musk', status: 'Approved', date: '2025-01-16 10:00' },
-                { role: 'Manager', user: 'Satya Nadella', status: 'Approved', date: '2025-01-16 14:00' },
-                { role: 'CFO', user: 'Andy Jassy', status: 'Approved', date: '2025-01-17 09:00' },
-                { role: 'CEO', user: 'Sundar Pichai', status: 'Approved', date: '2025-01-17 10:00' }
-            ],
-            isMarketTabHidden: false
-        },
-        {
-            id: 'REQ-2025-003', ticker: 'NVDA', name: 'Nvidia Corp.', status: 'Pending', stepIndex: 2,
-            currLimit: 20000000, propLimit: 40000000, purpose: 'New Credit Line', date: '2025-05-10',
-            forecast: 'AI chip demand surging.', bizDesc: 'New H100 orders.',
-            risks: 'Supply chain constraints.', mitigants: 'Dominant market share.', recommendation: 'Recommended for approval.',
-            files: [],
-            finConfig: null,
-            finPeriods: [],
-            history: [
-                { role: 'Maker', user: 'Tim Cook', status: 'Approved', date: '2025-05-10 10:00' },
-                { role: 'Reviewer', user: 'Jensen Huang', status: 'Approved', date: '2025-05-11 14:00' },
-                { role: 'Approver', user: 'Elon Musk', status: 'Pending', date: null },
-                { role: 'Manager', user: 'Satya Nadella', status: 'Pending', date: null },
-                { role: 'CFO', user: 'Andy Jassy', status: 'Pending', date: null },
-                { role: 'CEO', user: 'Sundar Pichai', status: 'Pending', date: null }
-            ],
-            isMarketTabHidden: false
-        },
-        {
-            id: 'REQ-2025-004', ticker: 'TSLA', name: 'Tesla Inc.', status: 'Returned', stepIndex: 0,
-            currLimit: 15000000, propLimit: 25000000, purpose: 'Payment Term Change', date: '2025-05-15',
-            forecast: 'EV production ramp up.', bizDesc: 'Global expansion.',
-            risks: 'Margin compression.', mitigants: 'Cost cutting.', recommendation: '',
-            files: [],
-            finConfig: null,
-            finPeriods: [],
-            history: [
-                { role: 'Maker', user: 'Tim Cook', status: 'Pending', date: null },
-                { role: 'Reviewer', user: 'Jensen Huang', status: 'Returned', date: '2025-05-16 09:00', comment: 'Please clarify payment terms.' },
-                { role: 'Approver', user: 'Elon Musk', status: 'Pending', date: null },
-                { role: 'Manager', user: 'Satya Nadella', status: 'Pending', date: null },
-                { role: 'CFO', user: 'Andy Jassy', status: 'Pending', date: null },
-                { role: 'CEO', user: 'Sundar Pichai', status: 'Pending', date: null }
-            ],
-            isMarketTabHidden: false
+    function roleUser(role) { const u = USERS.find(x => x.role === role); return u ? u.name : 'Unknown'; }
+
+    function buildSampleHistory(status, roles) {
+        const base = new Date('2026-01-01');
+        const stamp = i => { const d = new Date(base); d.setDate(d.getDate() + i * 3); const hh = ['09:00','10:30','11:15','13:45','15:00','16:30'][i % 6]; return d.toISOString().slice(0,10) + ' ' + hh; };
+        const h = roles.map(role => ({ role, user: roleUser(role), status: 'Pending', date: null }));
+
+        if (status === 'Draft') return { history: h, stepIndex: 0 };
+        if (status === 'Pending') {
+            h[0] = { ...h[0], status: 'Approved', date: stamp(0) };
+            if (h[1]) h[1] = { ...h[1], status: 'Approved', date: stamp(1) };
+            return { history: h, stepIndex: Math.min(2, h.length - 1) };
         }
+        if (status === 'Returned') {
+            h[1] = { ...h[1], status: 'Returned', date: stamp(1), comment: 'Please clarify and resubmit.' };
+            return { history: h, stepIndex: 0 };
+        }
+        if (status === 'Recalled') {
+            h[0] = { ...h[0], status: 'Approved', date: stamp(0) };
+            h[1] = { ...h[1], status: 'Pending', date: null, comment: '(Recalled by Maker)' };
+            return { history: h, stepIndex: 0 };
+        }
+        if (status === 'Rejected') {
+            h[1] = { ...h[1], status: 'Returned', date: stamp(1), comment: 'Rejected \u2014 does not meet policy.' };
+            return { history: h, stepIndex: 0 };
+        }
+        if (status === 'Approved') {
+            roles.forEach((r, i) => h[i] = { ...h[i], status: 'Approved', date: stamp(i) });
+            return { history: h, stepIndex: roles.length - 1 };
+        }
+        if (status === 'Cancelled') {
+            h[1] = { ...h[1], status: 'Returned', date: stamp(1), comment: 'Needs revision.' };
+            h.push({ role: 'Maker', user: roleUser('Maker'), status: 'Cancelled', date: stamp(2), comment: 'Cancelled by Maker' });
+            return { history: h, stepIndex: 0 };
+        }
+        return { history: h, stepIndex: 0 };
+    }
+
+    const CONDITION_LIBRARY = [
+        { text: 'Maintain minimum current ratio of 1.2x, tested quarterly.', due: '2026-12-31' },
+        { text: 'Provide quarterly management accounts within 30 days of quarter-end.', due: '2027-03-31' },
+        { text: 'No further increase in senior debt without prior written consent.', due: '2027-06-30' },
+        { text: 'Submit updated cash-flow forecast if DSO exceeds 75 days.', due: '2026-11-30' },
+        { text: 'Parent company guarantee to remain in place for the life of the facility.', due: '2027-12-31' }
     ];
+    function buildSampleConditions(status, n) {
+        // Only Approved / Pending requests carry forward conditions; attach to roughly 1-in-3 of them
+        // to represent cases where financial status didn't fully clear policy at review time.
+        if (!['Approved', 'Pending'].includes(status) || n % 3 !== 0) return [];
+        const count = (n % 2 === 0) ? 2 : 3;
+        return Array.from({ length: count }, (_, i) => CONDITION_LIBRARY[(n + i) % CONDITION_LIBRARY.length]);
+    }
+
+    function buildSampleRequests() {
+        const statuses = ['Draft', 'Pending', 'Returned', 'Recalled', 'Rejected', 'Approved', 'Cancelled'];
+        const purposes = ['New Credit Line', 'Credit Line Change', 'Payment Term Change', 'Add New Entity to Share'];
+        const tickers = Object.keys(CUSTOMER_DB);
+        const list = [];
+        let n = 0;
+        statuses.forEach(status => {
+            purposes.forEach(purpose => {
+                const ticker = tickers[n % tickers.length];
+                const cust = CUSTOMER_DB[ticker];
+                n++;
+                const id = `REQ-2026-${String(n).padStart(3, '0')}`;
+
+                let currLimit, propLimit;
+                if (purpose === 'New Credit Line') {
+                    currLimit = 0;
+                    propLimit = Math.round(cust.creditLine * (0.5 + (n % 4) * 0.15) / 1e5) * 1e5;
+                } else if (purpose === 'Credit Line Change') {
+                    currLimit = cust.creditLine;
+                    const bump = (n % 3 === 0) ? -0.2 : (0.15 + (n % 3) * 0.1);
+                    propLimit = Math.max(1e6, Math.round(cust.creditLine * (1 + bump) / 1e5) * 1e5);
+                } else {
+                    currLimit = cust.creditLine;
+                    propLimit = cust.creditLine;
+                }
+
+                const month = String(((n * 5) % 9) + 1).padStart(2, '0');
+                const day = String(((n * 7) % 27) + 1).padStart(2, '0');
+                const date = `2026-${month}-${day}`;
+                const built = buildSampleHistory(status, WORKFLOW_ROLES.slice());
+
+                list.push({
+                    id, ticker, name: cust.name, status, stepIndex: built.stepIndex,
+                    currLimit, propLimit, purpose, date, maker: roleUser('Maker'),
+                    typeReason: `${purpose} requested for ${cust.name}.`,
+                    forecast: `${cust.name}: outlook supports this ${purpose.toLowerCase()} request.`,
+                    bizDesc: `${cust.sector} / ${cust.domain} \u2014 ${cust.name}.`,
+                    risks: 'Standard counterparty and market risk considerations apply.',
+                    mitigants: 'Reviewed against payment history and available collateral.',
+                    recommendation: status === 'Approved' ? 'Approved as proposed.' : (status === 'Rejected' ? 'Not recommended at this time.' : ''),
+                    summary: '', files: [], finConfig: null, finPeriods: [],
+                    history: built.history, isMarketTabHidden: false,
+                    conditions: buildSampleConditions(status, n)
+                });
+            });
+        });
+        return list;
+    }
+
+    let requests = buildSampleRequests();
 
     let historyConfig = {
         columns: [
@@ -1725,15 +1912,18 @@
             { id: 'company', label: 'Company', visible: true },
             { id: 'purpose', label: 'Purpose', visible: true },
             { id: 'creditLine', label: 'Credit Line', visible: true },
-            { id: 'finalDate', label: 'Final Date', visible: true },
+            { id: 'finalDate', label: 'Approve Date', visible: true },
             { id: 'approveBy', label: 'Approve by', visible: true },
-            { id: 'status', label: 'Status', visible: true }
+            { id: 'status', label: 'Status', visible: true },
+            { id: 'condition', label: 'Condition', visible: true },
+            { id: 'created', label: 'Created', visible: false },
+            { id: 'delta', label: 'Δ Change', visible: false }
         ],
         sort: { column: 'finalDate', dir: 'desc' }
     };
 
     let currentReqId = null;
-    let quillForecast, quillBizDesc, quillRisks, quillMitigants, quillRecommendation, quillSummary, quillActionComment, quillPurpose;
+    let quillForecast, quillBizDesc, quillRisks, quillMitigants, quillRecommendation, quillActionComment, quillPurpose;
     let expandedQuill = null;
     let expandedSourceQuill = null;
 
@@ -1744,6 +1934,32 @@
     let mkt_dataByTicker = {};
     let mkt_perfData = new Map();
     let mkt_meta = {}; 
+    const mkt_fallbackPrice = {'NVDA':180,'GOOGL':175,'AAPL':230,'MSFT':420,'AMZN':185,'META':560,'TSLA':250};
+    const mkt_fallbackShares = {'NVDA':24.6e9,'GOOGL':12.3e9,'AAPL':15.3e9,'MSFT':7.43e9,'AMZN':10.4e9,'META':2.54e9,'TSLA':3.19e9};
+
+    // Deterministic (seeded) pseudo-random, so the same ticker always gets the same synthetic series
+    function mkt_seededRandom(seed) {
+        let s = seed % 2147483647; if (s <= 0) s += 2147483646;
+        return () => (s = (s * 16807) % 2147483647, (s - 1) / 2147483646);
+    }
+    function mkt_hashSeed(str) {
+        let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0;
+        return Math.abs(h) || 1;
+    }
+    // Fallback series used when the external market data source doesn't cover a ticker
+    // (e.g. its content changes over time), so the Market tab always has something to show.
+    function mkt_generateSyntheticSeries(ticker) {
+        const rand = mkt_seededRandom(mkt_hashSeed(ticker));
+        const target = mkt_fallbackPrice[ticker] || 100;
+        const days = 3 * 252;
+        const points = []; let d = new Date();
+        for (let i = 0; i < days; i++) { do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6); points.push(new Date(d)); }
+        points.reverse();
+        let p = target * (0.6 + rand() * 0.3);
+        const series = points.map(dt => { p = Math.max(1, p * (1.0004 + (rand() - 0.5) * 0.02)); return { date: new Date(dt), price: Math.round(p * 100) / 100 }; });
+        if (series.length) series[series.length - 1].price = target;
+        return series;
+    }
     
     // Req Market Tab Specific Vars
     let req_mkt_activeChart = null;
@@ -1803,10 +2019,6 @@
             if (!event.target.closest('#fin-period-selector')) {
                 document.getElementById('fin-period-dropdown-content').classList.remove('show');
             }
-            // Purpose Dropdown
-             if (!event.target.closest('#purpose-selector')) {
-                document.getElementById('purpose-dropdown-content').classList.remove('show');
-            }
         }
     });
 
@@ -1844,7 +2056,6 @@
         quillMitigants = new Quill('#editor-mitigants', fullToolbarOps);
         quillRecommendation = new Quill('#editor-recommendation', fullToolbarOps);
         quillActionComment = new Quill('#editor-action-comment', simpleToolbarOps);
-        quillSummary = new Quill('#editor-summary', fullToolbarOps);
         quillPurpose = new Quill('#editor-purpose', simpleToolbarOps);
 
         expandedQuill = new Quill('#expanded-quill-container', fullToolbarOps);
@@ -1854,8 +2065,73 @@
              }
         });
 
-        quillSummary.root.innerHTML = `<p><strong>Business Desc.:</strong></p><p>Insert details here...</p>`;
     }
+
+    // --- One-Pager: TinyMCE ---
+    const SUMMARY_DEFAULT = '<strong>Business Desc.:</strong><br>Insert details here...';
+    let tinySummary = null, summaryInitStarted = false, summaryPendingHtml = SUMMARY_DEFAULT, summaryEditable = false;
+
+    function ensureSummaryEditor() {
+        if (summaryInitStarted || typeof tinymce === 'undefined') return;
+        summaryInitStarted = true;
+        tinymce.init({
+            selector: '#editor-summary',
+            height: 680,
+            menubar: 'file edit insert format table',
+            branding: false, promotion: false,
+            plugins: 'lists advlist link image table code fullscreen searchreplace charmap autolink wordcount',
+            toolbar: [
+                'undo redo | fontfamily fontsize | bold italic underline strikethrough | forecolor backcolor',
+                'alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | table link image | removeformat code fullscreen searchreplace'
+            ],
+            toolbar_mode: 'floating',
+            toolbar_sticky: false,
+            // Pressing Enter should not wrap lines in <p> (avoids the extra vertical gap between lines);
+            // use <br> line breaks instead, like a plain text box.
+            forced_root_block: false,
+            automatic_uploads: true,
+            paste_data_images: true,
+            images_upload_handler: blob => Promise.resolve(`data:${blob.blob().type};base64,${blob.base64()}`),
+            content_style: 'body{font-family:Arial,"Microsoft JhengHei",sans-serif;font-size:14px;padding:8px} table{border-collapse:collapse} td,th{border:1px solid #ccc;padding:4px} .ql-align-center{text-align:center}.ql-align-right{text-align:right}.ql-align-justify{text-align:justify}',
+            setup: ed => { ed.on('init', () => { tinySummary = ed; ed.setContent(summaryPendingHtml); ed.mode.set(summaryEditable ? 'design' : 'readonly'); applySummaryToolbarVisibility(); }); }
+        });
+    }
+    function setSummaryHtml(html) { summaryPendingHtml = html; if (tinySummary) tinySummary.setContent(html); }
+    function getSummaryHtml() { return tinySummary ? tinySummary.getContent() : summaryPendingHtml; }
+    function applySummaryToolbarVisibility() {
+        const tox = document.querySelector('#pane-summary .tox-tinymce');
+        if (tox) tox.classList.toggle('onepager-readonly', !summaryEditable);
+    }
+    function setSummaryEditable(on) {
+        summaryEditable = on;
+        if (tinySummary) tinySummary.mode.set(on ? 'design' : 'readonly');
+        const b = document.getElementById('btn-summary-import');
+        if (b) b.style.display = on ? '' : 'none';
+        applySummaryToolbarVisibility();
+    }
+    function exportSummaryDocx() {
+        if (typeof htmlDocx === 'undefined') { alert('DOCX library failed to load.'); return; }
+        const req = requests.find(r => r.id === currentReqId);
+        const html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial,"Microsoft JhengHei";font-size:11pt} table{border-collapse:collapse} td,th{border:1px solid #999;padding:4px}</style></head><body>' + getSummaryHtml() + '</body></html>';
+        const blob = htmlDocx.asBlob(html);
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${(req && req.ticker) || 'Request'}_OnePager.docx`;
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    }
+    function importSummaryDocx(input) {
+        const file = input.files[0]; input.value = '';
+        if (!file) return;
+        if (typeof mammoth === 'undefined') { alert('DOCX reader failed to load.'); return; }
+        if (!confirm('Replace the current One-Pager content with the uploaded document?')) return;
+        const reader = new FileReader();
+        reader.onload = e => mammoth.convertToHtml({ arrayBuffer: e.target.result })
+            .then(r => setSummaryHtml(r.value))
+            .catch(err => alert('Could not read this .docx: ' + err.message));
+        reader.readAsArrayBuffer(file);
+    }
+    window.addEventListener('beforeprint', () => { const el = document.getElementById('summary-print'); if (el) el.innerHTML = getSummaryHtml(); });
 
     // --- Resizer Logic ---
     function initResizer() {
@@ -1981,7 +2257,7 @@
         const tabs = [
             { id: 'dashboard', icon: 'dashboard', label: 'Dashboard', roles: ['All'] },
             { id: 'customer-master', icon: 'business', label: 'Customer Master', roles: ['Maker', 'Reviewer'] },
-            { id: 'historical', icon: 'history', label: 'History', roles: ['All'] }
+            { id: 'historical', icon: 'task_alt', label: 'Completed Cases', roles: ['All'] }
         ];
 
         container.innerHTML = tabs
@@ -2003,6 +2279,8 @@
             }
         }
 
+        if (tabId !== 'historical') historicalReturnTo = null; // leaving Completed Cases the normal way clears the shortcut Back button
+
         document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
         const tabEl = document.querySelector(`.nav-tab[data-tab="${tabId}"]`);
         if(tabEl) tabEl.classList.add('active');
@@ -2019,7 +2297,17 @@
         }
 
         if(tabId === 'dashboard') renderNotebooks();
-        if(tabId === 'historical') renderHistorical();
+        if(tabId === 'historical') {
+            renderHistorical();
+            const backBtn = document.getElementById('hist-back-btn');
+            if (backBtn) backBtn.style.display = historicalReturnTo ? '' : 'none';
+        }
+    }
+
+    function historicalBack() {
+        const target = historicalReturnTo || 'dashboard';
+        historicalReturnTo = null;
+        navTo(target);
     }
     
     function handleBackNav() {
@@ -2027,6 +2315,10 @@
             const req = requests.find(r => r.id === currentReqId);
             if (req && (req.status === 'Draft' || req.status === 'Returned')) {
                 commitSave(true);
+                // Discard untouched new drafts so empty rows don't pile up
+                if (req.status === 'Draft' && !req.ticker && !req.name && !req.propLimit) {
+                    requests = requests.filter(r => r.id !== req.id);
+                }
             }
         }
         navTo(sourceView);
@@ -2076,109 +2368,293 @@
         document.getElementById('dashboard-greeting').innerText = `${greeting}! ${currentUser.name.split(' ')[0]}`;
     }
 
-    // --- Dashboard ---
-    function renderNotebooks() {
-        const container = document.getElementById('notebook-container');
-        container.innerHTML = '';
+    // --- Dashboard (list view) ---
+    const DONE_ST = ['Approved','Rejected','Cancelled'];
+    const ST_CLASS = { Pending:'st-pending', Approved:'st-approved', Rejected:'st-rejected', Returned:'st-rejected', Cancelled:'st-cancelled', Draft:'st-draft', Recalled:'st-recalled' };
+    const DASH_COLS = [
+        {id:'id',label:'Request ID'},{id:'ticker',label:'Company'},{id:'purpose',label:'Purpose'},
+        {id:'currLimit',label:'Current Line'},{id:'propLimit',label:'Proposed Line'},
+        {id:'date',label:'Created'},{id:'status',label:'Status'},{id:'step',label:'Approval Progress'},{id:'days',label:'Days'}
+    ];
+    let dashSort = { col:'id', dir:'desc' };
+    let dashCard = null, dashCardDefs = [], dashCharts = {};
+    const $d = id => document.getElementById(id);
 
-        if (currentUser.role === 'Maker') {
-            const newCard = document.createElement('div');
-            newCard.className = 'notebook-card new-request';
-            newCard.innerHTML = `<span class="material-icons" style="font-size:48px;">add_circle_outline</span><div class="mt-2 font-bold">New Request</div>`;
-            newCard.onclick = () => createNewRequest();
-            container.appendChild(newCard);
+    // --- Generic Data-Table Column Resize (Active Requests / Customer Master / Completed Cases) ---
+    // Columns default to content-fit width (no forced table-layout); dragging a header's edge
+    // freezes the current widths and switches that table to a fixed layout so the dragged column
+    // can be resized independently. Widths are remembered per table id across re-renders.
+    let dtResizableCol = null, dtStartX = 0, dtStartWidth = 0, dtActiveTable = null;
+    const dtColumnWidths = {};
+
+    function dtInitResize(e, resizerEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        const th = resizerEl.parentElement;
+        const table = th.closest('table');
+        if (!table) return;
+        if (table.style.tableLayout !== 'fixed') {
+            table.querySelectorAll(':scope > thead > tr > th').forEach(h => { h.style.width = h.offsetWidth + 'px'; });
+            table.style.tableLayout = 'fixed';
         }
+        dtActiveTable = table;
+        dtResizableCol = th;
+        dtStartX = e.pageX;
+        dtStartWidth = th.offsetWidth;
+        document.addEventListener('mousemove', dtDoResize);
+        document.addEventListener('mouseup', dtStopResize);
+        document.body.style.cursor = 'col-resize';
+    }
 
-        let visibleRequests = requests.filter(req => {
-            if (req.status === 'Cancelled' || req.status === 'Approved' || req.status === 'Rejected') return false; 
-            
-            // Maker sees all they initiated
-            if (currentUser.role === 'Maker') return true; 
+    function dtDoResize(e) {
+        if (!dtResizableCol) return;
+        const width = dtStartWidth + (e.pageX - dtStartX);
+        if (width > 40) {
+            dtResizableCol.style.width = width + 'px';
+            dtResizableCol.style.minWidth = width + 'px';
+        }
+    }
 
-            // Reviewer sees all (Portfolio tracking)
-            if (currentUser.role === 'Reviewer') return true;
+    function dtStopResize() {
+        if (dtResizableCol && dtActiveTable && dtActiveTable.id) {
+            const ths = [...dtActiveTable.querySelectorAll(':scope > thead > tr > th')];
+            dtColumnWidths[dtActiveTable.id] = ths.map(h => h.style.width || '');
+        }
+        dtResizableCol = null;
+        dtActiveTable = null;
+        document.removeEventListener('mousemove', dtDoResize);
+        document.removeEventListener('mouseup', dtStopResize);
+        document.body.style.cursor = '';
+    }
 
-            // Approvers (Manager, CFO, CEO) ONLY see requests PENDING at their specific step
-            // If they approved it, they no longer see it here.
-            if (req.status === 'Pending') {
-                const currentStepRole = req.history[req.stepIndex]?.role;
-                return currentStepRole === currentUser.role;
-            }
+    function dtRestoreWidths(table) {
+        if (!table || !table.id) return;
+        const widths = dtColumnWidths[table.id];
+        if (!widths || !widths.length) return;
+        const ths = [...table.querySelectorAll(':scope > thead > tr > th')];
+        if (!ths.length) return;
+        table.style.tableLayout = 'fixed';
+        ths.forEach((h, i) => {
+            if (widths[i]) { h.style.width = widths[i]; h.style.minWidth = widths[i]; }
+        });
+    }
 
-            return false;
+    function parseD(s) {
+        if (!s) return null;
+        let d = new Date(s);
+        if (isNaN(d)) d = new Date(String(s).replace(' ', 'T'));
+        return isNaN(d) ? null : d;
+    }
+    function finalDate(r) {
+        const h = r.history.filter(x => x.date).pop();
+        return h ? parseD(h.date) : null;
+    }
+    function money(n) {
+        const a = Math.abs(n);
+        const t = a >= 1e6 ? (a/1e6).toFixed(1).replace(/\.0$/,'') + 'M' : a >= 1e3 ? Math.round(a/1e3) + 'K' : a;
+        return (n < 0 ? '-' : '') + '$' + t;
+    }
+    const isMine = r => !DONE_ST.includes(r.status) && r.history[r.stepIndex]?.role === currentUser.role;
+
+    const MGMT_ROLES = ['Manager', 'CFO', 'CEO'];
+    // Approver, and every stage after it, share the same simplified stat-card treatment.
+    const POST_REVIEW_ROLES = ['Approver', 'Manager', 'CFO', 'CEO'];
+    function dashVisible() {
+        // Draft requests are only visible to the Maker who owns them.
+        if (currentUser.role === 'Maker') return requests.filter(r => r.status !== 'Draft' || r.maker === currentUser.name);
+        if (currentUser.role === 'Reviewer') return requests.filter(r => r.status !== 'Draft');
+        // Approver / Manager / CFO / CEO: only requests currently awaiting their own action — they should never
+        // see other roles' Returned/Rejected items sitting in their Active Requests list.
+        return requests.filter(r => isMine(r));
+    }
+    function dashRow(r) {
+        const done = DONE_ST.includes(r.status);
+        const start = parseD(r.date), end = done ? (finalDate(r) || new Date()) : new Date();
+        return { r, id:r.id, ticker:r.ticker || '', name:r.name || '', purpose:r.purpose || '', currLimit:r.currLimit||0, propLimit:r.propLimit||0,
+                 delta:(r.propLimit||0)-(r.currLimit||0), date:r.date || '', maker: r.maker || (r.history.find(h => h.role === 'Maker') || {}).user || '',
+                 status:r.status, step: done ? 99 : r.stepIndex,
+                 days: start ? Math.max(0, Math.round((end-start)/864e5)) : 0, mine:isMine(r), done };
+    }
+
+    function renderNotebooks() {
+        $d('btn-new-request').style.display = currentUser.role === 'Maker' ? 'inline-flex' : 'none';
+        const isMgmt = MGMT_ROLES.includes(currentUser.role);
+        const isPostReview = POST_REVIEW_ROLES.includes(currentUser.role);
+        $d('dash-stats').style.display = '';
+        $d('dash-charts-row').style.display = isPostReview ? 'none' : ''; // trend chart & Upcoming Reviews aren't relevant from Approver onward
+        $d('dash-status').style.display = isMgmt ? 'none' : '';
+        $d('dash-mine-wrap').style.display = isMgmt ? 'none' : '';
+        const ps = $d('dash-purpose'), cur = ps.value;
+        const list = [...new Set(requests.map(r => r.purpose).filter(Boolean))];
+        ps.innerHTML = '<option value="">All Purposes</option>' + list.map(p => `<option value="${p}">${p}</option>`).join('');
+        ps.value = list.includes(cur) ? cur : '';
+        const ts = $d('dash-search'), curT = ts.value;
+        const tickerList = [...new Set(dashVisible().map(r => r.ticker).filter(Boolean))].sort();
+        ts.innerHTML = '<option value="">All Tickers</option>' + tickerList.map(t => `<option value="${t}">${t}</option>`).join('');
+        ts.value = tickerList.includes(curT) ? curT : '';
+        renderDashStats(); renderDashTable();
+        if (!isPostReview) { renderDashCharts(); renderWeekCalendar(); }
+    }
+
+    // --- Dashboard: Upcoming Review Calendar (This Week / Next Week) ---
+    function reviewList() {
+        return Object.entries(CUSTOMER_DB)
+            .map(([ticker, c]) => ({ ticker, name: c.name, lastRev: c.lastRev, nextRev: c.nextRev }))
+            .sort((a, b) => (a.nextRev || '').localeCompare(b.nextRev || ''));
+    }
+
+    function weekCalItemHtml(r) {
+        return `<div class="week-cal-item" title="${r.name} \u2014 review due" onclick="calGoToTicker('${r.ticker}')">
+            <span class="week-cal-tag">${r.ticker}</span>
+            <span class="week-cal-name">${r.name}</span>
+            <span class="week-cal-date">${r.nextRev}</span>
+        </div>`;
+    }
+
+    function renderWeekCalendar() {
+        const thisWeekEl = document.getElementById('week-cal-thisweek');
+        const nextWeekEl = document.getElementById('week-cal-nextweek');
+        const in2WeekEl = document.getElementById('week-cal-in2weeks');
+        const in3WeekEl = document.getElementById('week-cal-in3weeks');
+        if (!thisWeekEl || !nextWeekEl || !in2WeekEl || !in3WeekEl) return;
+
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate() + n); return r; };
+        const inRange = (dateStr, start, end) => {
+            if (!dateStr) return false;
+            const d = new Date(dateStr + 'T00:00:00');
+            return d >= start && d <= end;
+        };
+
+        const reviews = reviewList();
+        const weekRanges = [
+            { el: thisWeekEl, start: today, end: addDays(today, 6) },
+            { el: nextWeekEl, start: addDays(today, 7), end: addDays(today, 13) },
+            { el: in2WeekEl, start: addDays(today, 14), end: addDays(today, 20) },
+            { el: in3WeekEl, start: addDays(today, 21), end: addDays(today, 27) }
+        ];
+
+        weekRanges.forEach(({ el, start, end }) => {
+            const items = reviews.filter(r => inRange(r.nextRev, start, end));
+            el.innerHTML = items.length ? items.map(weekCalItemHtml).join('') : '<div class="week-cal-empty">None</div>';
+        });
+    }
+
+    function calGoToTicker(ticker) {
+        navTo('customer-master');
+        const el = document.getElementById('cust-filter-q');
+        if (el) { el.value = ticker; renderCustomerMaster(); }
+    }
+
+    function renderDashStats() {
+        const isPostReview = POST_REVIEW_ROLES.includes(currentUser.role);
+        // dashVisible() is restricted to "awaiting my action" for Approver/Manager/CFO/CEO, so the stat cards
+        // and the Active Requests list below always match (no Returned/Rejected items sneak in for these roles).
+        const v = dashVisible();
+        const cnt = f => v.filter(f).length;
+        // Approved requests move out of the Active Requests list entirely (into Completed Cases), so for
+        // post-review roles the Approved count is taken separately from every request this role has ever
+        // taken part in approving, rather than from the restricted "awaiting my action" set above.
+        const approvedCount = isPostReview
+            ? requests.filter(r => r.status === 'Approved' && r.history.some(h => h.role === currentUser.role)).length
+            : cnt(r => r.status === 'Approved');
+        dashCardDefs = isPostReview ? [
+            {key:'mine', label:'Awaiting My Action', val:cnt(isMine), mine:true},
+            {key:'pending', label:'In Approval', val:cnt(r => r.status==='Pending'), status:'Pending'},
+            {key:'approved', label:'Approved', val:approvedCount, status:'Approved'}
+        ] : [
+            {key:'mine', label:'Awaiting My Action', val:cnt(isMine), mine:true},
+            {key:'pending', label:'In Approval', val:cnt(r => r.status==='Pending'), status:'Pending'},
+            {key:'resub', label:'Returned / Recalled', val:cnt(r => ['Returned','Recalled'].includes(r.status)), sub:'waiting for resubmit', status:'Returned+Recalled'},
+            {key:'rejected', label:'Rejected', val:cnt(r => r.status==='Rejected'), status:'Rejected'},
+            {key:'approved', label:'Approved', val:approvedCount, status:'Approved'}
+        ];
+        $d('dash-stats').innerHTML = dashCardDefs.map(c =>
+            `<div class="stat-card clickable ${dashCard===c.key ? 'active' : ''}" onclick="dashCardClick('${c.key}')">
+                <div class="stat-label">${c.label}</div><div class="stat-value">${c.val}</div><div class="stat-sub">${c.sub || '&nbsp;'}</div></div>`
+        ).join('');
+    }
+    function dashCardClick(key) {
+        if (key === 'approved') { historicalReturnTo = 'dashboard'; navTo('historical'); return; } // Approved requests live in History, not Active Requests
+        const c = dashCardDefs.find(x => x.key === key);
+        if (dashCard === key) { dashReset(); return; }
+        $d('dash-search').value = ''; $d('dash-purpose').value = '';
+        $d('dash-status').value = c.status || ''; $d('dash-mine').checked = !!c.mine;
+        dashCard = key; renderDashStats(); renderDashTable();
+    }
+    function dashFilterChanged() { dashCard = null; renderDashStats(); renderDashTable(); }
+    function dashReset() {
+        $d('dash-search').value = ''; $d('dash-status').value = ''; $d('dash-purpose').value = ''; $d('dash-mine').checked = false;
+        dashCard = null; renderDashStats(); renderDashTable();
+    }
+    function dashSortBy(col) {
+        dashSort = { col, dir: dashSort.col === col && dashSort.dir === 'asc' ? 'desc' : 'asc' };
+        renderDashTable();
+    }
+
+    function renderDashTable() {
+        const q = $d('dash-search').value, st = $d('dash-status').value, pu = $d('dash-purpose').value, mine = $d('dash-mine').checked;
+        const all = dashVisible().filter(r => r.status !== 'Approved' && r.status !== 'Cancelled'); // Approved / Cancelled items don't belong in Active Requests
+        let rows = all.map(dashRow).filter(d =>
+            (!q || d.ticker === q) &&
+            (!st || st.split('+').includes(d.status)) && (!pu || d.purpose === pu) && (!mine || d.mine));
+        const { col, dir } = dashSort, k = dir === 'asc' ? 1 : -1;
+        rows.sort((a,b) => {
+            let x = a[col], y = b[col];
+            if (typeof x === 'string') { x = x.toLowerCase(); y = y.toLowerCase(); }
+            return x < y ? -k : x > y ? k : 0;
         });
 
-        visibleRequests.sort((a, b) => {
-            const getDate = (req) => {
-                const dates = req.history.filter(h => h.date).map(h => new Date(h.date).getTime());
-                return dates.length ? Math.max(...dates) : 0;
-            };
-            return getDate(b) - getDate(a);
-        });
+        $d('dash-thead').innerHTML = '<tr>' + DASH_COLS.map(c =>
+            `<th onclick="dashSortBy('${c.id}')">${c.label}<span class="material-icons align-middle text-sm">${c.id === col ? (dir==='asc' ? 'arrow_drop_up' : 'arrow_drop_down') : 'unfold_more'}</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>`
+        ).join('') + '<th style="text-align:right;">Action<div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th></tr>';
+        dtRestoreWidths($d('dash-table'));
 
-        visibleRequests.forEach(req => {
-            const isReturned = req.status === 'Returned';
-            const isRecalled = req.status === 'Recalled';
-            const isMyTurn = req.history[req.stepIndex]?.role === currentUser.role && req.status !== 'Approved';
-            
-            const currentStepObj = req.history[req.stepIndex];
-            const nextApproverText = currentStepObj ? `Next: ${currentStepObj.user} (${currentStepObj.role})` : '';
+        $d('dash-count').innerText = `${rows.length} / ${all.length} requests`;
+        if (!rows.length) { $d('dash-tbody').innerHTML = `<tr><td colspan="${DASH_COLS.length+1}" class="p-4 text-center text-gray-500">No requests found.</td></tr>`; return; }
 
-            // Recall status doesn't get special 'returned' styling (pink), stays neutral/white
-            const card = document.createElement('div');
-            card.className = `notebook-card ${isReturned ? 'returned' : ''} ${isMyTurn ? 'active-turn' : ''}`;
-            
-            let deleteBtnHtml = '';
-            if (currentUser.role === 'Maker' && req.status === 'Draft') {
-                deleteBtnHtml = `<div class="card-delete-btn" onclick="event.stopPropagation(); deleteDraft('${req.id}')"><span class="material-icons" style="font-size:18px;">delete</span></div>`;
-            }
+        $d('dash-tbody').innerHTML = rows.map(d => {
+            const r = d.r, step = r.history[r.stepIndex];
+            const bars = r.history.map((h, i) => `<div class="p-bar ${h.status==='Approved' ? 'done' : (i===r.stepIndex && !d.done ? 'active' : (h.status==='Returned' ? 'rejected' : ''))}"></div>`).join('');
+            const next = d.done ? '' : `Next: ${step ? step.user + ' (' + step.role + ')' : '-'}`;
+            const dc = d.delta > 0 ? '#15803d' : d.delta < 0 ? '#b91c1c' : '#6b7280';
+            const del = (currentUser.role === 'Maker' && r.status === 'Draft') ? `<span class="material-icons" title="Delete draft" style="cursor:pointer;color:#9ca3af;font-size:18px;vertical-align:middle;margin-right:6px;" onclick="deleteDraft('${r.id}')">delete</span>`
+                : (currentUser.role === 'Maker' && r.status === 'Rejected') ? `<span class="material-icons" title="Void request" style="cursor:pointer;color:#9ca3af;font-size:18px;vertical-align:middle;margin-right:6px;" onclick="voidRequest('${r.id}')">delete</span>` : '';
+            return `<tr class="${d.mine ? 'mine-row' : ''}">
+                <td><span class="dash-link" onclick="openRequest('${r.id}','dashboard')">${r.id}</span></td>
+                <td><div class="font-bold dash-truncate" title="${d.ticker || ''}">${d.ticker || '<span class="text-gray-400">(new)</span>'}</div><div class="text-xs text-gray-500 dash-truncate" title="${d.name || ''}">${d.name}</div></td>
+                <td><div class="dash-truncate" title="${d.purpose || ''}">${d.purpose}</div></td>
+                <td>${money(d.currLimit)}</td>
+                <td>${money(d.propLimit)}<div style="color:${dc};font-weight:600;font-size:11px;">${d.delta > 0 ? '+' : ''}${money(d.delta)}</div></td>
+                <td><div class="font-medium dash-truncate" title="${d.maker || ''}">${d.maker || '-'}</div><div class="text-xs text-gray-500 dash-truncate" title="${d.date || ''}">${d.date}</div></td>
+                <td><span class="status-badge ${ST_CLASS[d.status] || 'st-draft'}">${d.status}</span></td>
+                <td style="min-width:150px;"><div class="progress-bars">${bars}</div><div class="text-xs text-gray-500 dash-truncate" title="${next}">${next}</div></td>
+                <td>${d.days}</td>
+                <td style="text-align:right;white-space:nowrap;">${del}<button class="btn btn-sm ${d.mine ? 'btn-primary' : 'btn-ghost'}" onclick="openRequest('${r.id}','dashboard')">Review</button></td></tr>`;
+        }).join('');
+    }
 
-            const progressHTML = req.history.map((step, idx) => {
-                let statusClass = '';
-                if (step.status === 'Approved') statusClass = 'done';
-                else if (idx === req.stepIndex) statusClass = 'active';
-                else if (step.status === 'Returned') statusClass = 'rejected';
-                // Recalled status in history is visually treated neutrally or like draft
-                return `<div class="p-bar ${statusClass}"></div>`;
-            }).join('');
-
-            const limitText = `$${(req.currLimit/1000000).toFixed(0)}M to $${(req.propLimit/1000000).toFixed(0)}M`;
-            
-            // Badge Logic
-            let badgeClass = 'st-draft';
-            if (req.status === 'Pending') badgeClass = 'st-pending';
-            else if (req.status === 'Returned') badgeClass = 'st-rejected';
-            else if (req.status === 'Recalled') badgeClass = 'st-recalled';
-
-            card.innerHTML = `
-                ${deleteBtnHtml}
-                <div class="flex justify-between items-start mb-2 pr-6">
-                    <h3 class="text-xl font-bold">${req.ticker}</h3>
-                    <span class="status-badge ${badgeClass}">
-                        ${req.status}
-                    </span>
-                </div>
-                <div class="text-sm text-gray-500 font-bold mb-1">${req.name}</div>
-                <div class="text-xs text-gray-400 mb-2">${req.id}</div>
-                
-                <div class="grid grid-cols-2 gap-2 mb-2 text-sm">
-                    <div>
-                         <span class="block text-gray-400 text-xs">Limit</span>
-                         <span class="font-medium text-gray-700">${limitText}</span>
-                    </div>
-                    <div>
-                         <span class="block text-gray-400 text-xs">Purpose</span>
-                         <span class="font-medium text-gray-700 truncate" title="${req.purpose}">${req.purpose}</span>
-                    </div>
-                </div>
-                
-                <div class="card-progress-area">
-                    <div class="next-approver-label">${nextApproverText}</div>
-                    <div class="progress-bars">${progressHTML}</div>
-                </div>
-            `;
-            card.onclick = () => openRequest(req.id, 'dashboard');
-            container.appendChild(card);
+    function renderDashCharts() {
+        if (typeof Chart === 'undefined') return;
+        Object.values(dashCharts).forEach(c => c.destroy());
+        const v = dashVisible();
+        const mk = d => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` : null;
+        const createM = r => mk(parseD(r.date));
+        const keys = v.map(createM).filter(Boolean).sort();
+        let months = [];
+        if (keys.length) {
+            let [y, m] = keys[0].split('-').map(Number); const end = keys[keys.length-1];
+            for (;;) { const k = `${y}-${String(m).padStart(2,'0')}`; months.push(k); if (k >= end || months.length > 60) break; if (++m > 12) { m = 1; y++; } }
+            months = months.slice(-12);
+        }
+        const cntBy = f => months.map(m => v.filter(r => createM(r) === m && f(r)).length);
+        const whole = { beginAtZero:true, ticks:{ precision:0 } };
+        dashCharts.m = new Chart($d('dash-chart-monthly'), {
+            type:'bar',
+            data:{ labels:months, datasets:[
+                { label:'Completed', data:cntBy(r => DONE_ST.includes(r.status)), backgroundColor:'#3b82f6' },
+                { label:'In progress', data:cntBy(r => !DONE_ST.includes(r.status)), backgroundColor:'#f59e0b' } ]},
+            options:{ responsive:true, maintainAspectRatio:false, scales:{ x:{ stacked:true }, y:{ stacked:true, ...whole } } }
         });
     }
 
@@ -2211,10 +2687,16 @@
         
         // POINT 1: Reset Scroll to Top & Reset to First Tab
         document.getElementById('form-container').scrollTop = 0;
+
+        // Maker viewing their own Draft only needs Request Form + Financials + Market
+        const makerDraftOnly = currentUser.role === 'Maker' && req.status === 'Draft';
+        document.getElementById('tab-review-form').style.display = makerDraftOnly ? 'none' : '';
+        document.getElementById('tab-summary').style.display = makerDraftOnly ? 'none' : '';
+
         switchInternalTab('req-form', document.getElementById('tab-req-form'));
 
 
-        document.getElementById('detail-header-title').innerText = `${req.ticker} - ${req.name}`;
+        document.getElementById('detail-header-title').innerText = (req.ticker || req.name) ? `${req.ticker} - ${req.name}` : `New Request (${req.id})`;
 
         document.getElementById('frm-ticker').value = req.ticker;
         document.getElementById('frm-name').value = req.name;
@@ -2224,8 +2706,7 @@
         
         
         // Manual toggle of visibility without calling handlePurposeChange() to preserve values
-        const purposeCheck = req.purpose || '';
-        if(purposeCheck.includes('Add New Entity to Share')) {
+        if(req.purpose === 'Add New Entity to Share') {
             document.getElementById('shared-entity-row').classList.remove('hidden');
             document.getElementById('shared-purpose-row').classList.remove('hidden');
         } else {
@@ -2280,11 +2761,7 @@
         toggleInputs('pane-review-form', canEditReviewForm);
 		
         if(currentUser.role === 'Reviewer' && isAtMyStep(req)) {
-             const btn = document.getElementById('btn-purpose-dropdown');
-             if(btn) {
-                 btn.disabled = false;
-                 btn.classList.remove('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-             }
+             document.getElementById('frm-purpose').disabled = false;
              document.getElementById('frm-type-reason').readOnly = false;
 			 document.getElementById('frm-shared-tickers').readOnly = false;
 			 document.getElementById('frm-shared-purpose').readOnly = false;
@@ -2292,27 +2769,8 @@
 		document.getElementById('rev-risk-subtitle').value = req.riskAnalysisSubtitle || 'Financials as of FYXX ended MM/DD/YYYY';
         document.getElementById('rev-risk-subtitle').readOnly = !canEditReviewForm;
         
-        const savedPurpose = req.purpose || 'New Credit Line';
-        const selectedPurposes = savedPurpose.split(', ');
-        
-        const purposeItems = document.querySelectorAll('#purpose-dropdown-content .dropdown-item-check');
-        purposeItems.forEach(item => {
-            const text = item.innerText.trim();
-            if (selectedPurposes.includes(text)) {
-                item.querySelector('.material-icons').innerText = 'check_box';
-                item.classList.add('text-blue-600', 'font-medium', 'bg-blue-50');
-            } else {
-                item.querySelector('.material-icons').innerText = 'check_box_outline_blank';
-                item.classList.remove('text-blue-600', 'font-medium', 'bg-blue-50');
-            }
-        });
-        
-        document.getElementById('frm-purpose').value = savedPurpose;
-
-        const pDisplay = document.getElementById('purpose-display');
-        if (selectedPurposes.length === 0) pDisplay.innerText = 'Select Purpose';
-        else pDisplay.innerText = selectedPurposes.join('<br>');
-
+        const pSelectForm = document.getElementById('frm-purpose');
+        pSelectForm.value = req.purpose || 'New Credit Line';
 		document.getElementById('frm-type-reason').value = req.typeReason || '';
 
         // Reviewer Purpose Editor - Logic: Use Reviewer's saved value OR construct from Maker's
@@ -2327,13 +2785,12 @@
         quillRecommendation.root.innerHTML = req.recommendation || '';
         quillActionComment.root.innerHTML = ''; 
         
-        if(req.summary) quillSummary.root.innerHTML = req.summary;
-        else quillSummary.root.innerHTML = `<p><strong>Business Desc.:</strong></p><p>Insert details here...</p>`;
+        setSummaryHtml(req.summary || SUMMARY_DEFAULT);
 
         document.getElementById('req-prepared-by').value = req.reqPreparedBy || 'Tim Cook';
         document.getElementById('rev-prepared-by').value = req.revPreparedBy || 'Jensen Huang';
 
-        if (canEditReqForm && (req.purpose && req.purpose.includes('New Credit Line'))) {
+        if (canEditReqForm && req.purpose === 'New Credit Line') {
              document.getElementById('frm-curr-limit').readOnly = true;
         }
         
@@ -2367,7 +2824,7 @@
         setQuill(quillRecommendation, 'wrapper-recommendation', canEditReviewForm);
         setQuill(quillPurpose, 'wrapper-purpose', canEditReviewForm);
         
-        setQuill(quillSummary, 'wrapper-summary', canEditReviewForm);
+        setSummaryEditable(canEditReviewForm);
         
         setQuill(quillActionComment, 'wrapper-action-comment', (canEditReqForm || canEditReviewForm || isAtMyStep(req))); 
 
@@ -2522,13 +2979,6 @@
             inp.readOnly = !enable;
             if(inp.tagName === 'SELECT') inp.disabled = !enable;
         });
-		
-        const dropdownBtns = container.querySelectorAll('.multi-select-dropdown .dropdown-btn');
-        dropdownBtns.forEach(btn => {
-            btn.disabled = !enable;
-            if(!enable) btn.classList.add('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-            else btn.classList.remove('bg-gray-100', 'text-gray-400', 'cursor-not-allowed');
-        });
     }
 
     function openExpandedEditor(wrapperId) {
@@ -2539,7 +2989,6 @@
         else if(wrapperId === 'wrapper-mitigants') sourceQuill = quillMitigants;
         else if(wrapperId === 'wrapper-recommendation') sourceQuill = quillRecommendation;
         else if(wrapperId === 'wrapper-purpose') sourceQuill = quillPurpose;
-        else if(wrapperId === 'wrapper-summary') sourceQuill = quillSummary;
         else if(wrapperId === 'wrapper-action-comment') sourceQuill = quillActionComment;
 
         if(sourceQuill) {
@@ -2569,43 +3018,6 @@
     		req.propLimit = parseInt(document.getElementById('frm-prop-limit').value.replace(/,/g, '')) || 0;
     		autoAdjustWorkflow(req);
         }
-    }
-	
-    function togglePurposeDropdown() {
-        const btn = document.getElementById('btn-purpose-dropdown');
-        if(!btn.disabled) {
-             document.getElementById('purpose-dropdown-content').classList.toggle('show');
-        }
-    }
-
-    function togglePurpose(value, element) {
-        // Prevent toggle if disabled (though click shouldn't reach here if dropdown hidden, but safety check)
-        const btn = document.getElementById('btn-purpose-dropdown');
-        if(btn.disabled) return;
-
-        let currentVal = document.getElementById('frm-purpose').value;
-        let selected = currentVal ? currentVal.split(', ') : [];
-        
-        if (selected.includes(value)) {
-            selected = selected.filter(v => v !== value);
-            element.querySelector('.material-icons').innerText = 'check_box_outline_blank';
-            element.classList.remove('text-blue-600', 'font-medium', 'bg-blue-50');
-        } else {
-            selected.push(value);
-            element.querySelector('.material-icons').innerText = 'check_box';
-            element.classList.add('text-blue-600', 'font-medium', 'bg-blue-50');
-        }
-        
-        // Update Hidden Input
-        document.getElementById('frm-purpose').value = selected.join(', ');
-        
-        // Update Button Text
-        const display = document.getElementById('purpose-display');
-        if (selected.length === 0) display.innerText = 'Select Purpose';
-        else display.innerText = selected.join('<br>');
-        
-        // Trigger Change Logic
-        handlePurposeChange();
     }
 
     function autoAdjustWorkflow(req) {
@@ -2637,10 +3049,7 @@
     }
 
     function handlePurposeChange() {
-        
-		const valStr = document.getElementById('frm-purpose').value;
-        const selected = valStr ? valStr.split(', ') : [];
-
+        const val = document.getElementById('frm-purpose').value;
         const req = requests.find(r => r.id === currentReqId);
         const isEdit = currentUser.role === 'Maker' && (req.status === 'Draft' || req.status === 'Returned' || req.status === 'Recalled');
 
@@ -2648,11 +3057,11 @@
             const ticker = document.getElementById('frm-ticker').value;
             const cust = CUSTOMER_DB[ticker];
             
-            if(selected.includes('New Credit Line')) {
+            if(val === 'New Credit Line') {
                 document.getElementById('frm-curr-limit').value = 0;
                 document.getElementById('frm-curr-limit').readOnly = true;
                 req.currLimit = 0;
-             } else if (selected.includes('Credit Line Change')) {
+            } else if (val === 'Credit Line Change') {
                 if(cust) {
                      document.getElementById('frm-curr-limit').value = cust.creditLine.toLocaleString();
                      req.currLimit = cust.creditLine;
@@ -2660,10 +3069,7 @@
                 document.getElementById('frm-curr-limit').readOnly = false;
             } else {
                 // Bug 3 Fix: Pre-fill and Default for others
-                // Only if something is selected, or we default to maintenance mode?
-                // If nothing selected, we probably shouldn't overwrite unless we want a default state.
-                // Assuming "else" implies "Payment Term Change" or "Add New Entity" or empty (but usually one is selected).
-                if(cust && selected.length > 0) {
+                if(cust) {
                      const limitStr = cust.creditLine.toLocaleString();
                      document.getElementById('frm-curr-limit').value = limitStr;
                      document.getElementById('frm-prop-limit').value = limitStr;
@@ -2675,7 +3081,7 @@
             handleLimitChange();
         }
 
-        if(selected.includes('Add New Entity to Share')) {
+        if(val === 'Add New Entity to Share') {
             document.getElementById('shared-entity-row').classList.remove('hidden');
             document.getElementById('shared-purpose-row').classList.remove('hidden');
         } else {
@@ -2701,13 +3107,12 @@
             
             // Bug 3 Fix: Apply same logic on ticker change
             const purpose = document.getElementById('frm-purpose').value;
-            if(!purpose.includes('New Credit Line')) {
+            if(purpose !== 'New Credit Line') {
                 const limitStr = cust.creditLine.toLocaleString();
                 document.getElementById('frm-curr-limit').value = limitStr;
                 
                 // Also default prop limit for these specific types
-                // But logic is trickier with multi select. Assume if not New/Change line, we default prop limit.
-                if (!purpose.includes('Credit Line Change')) {
+                if (purpose === 'Add New Entity to Share' || purpose === 'Payment Term Change') {
                     document.getElementById('frm-prop-limit').value = limitStr;
                 } else {
                     // For Credit Line Change, default to current
@@ -3039,7 +3444,7 @@
             return `
                 <div class="wf-item">
                     <div class="wf-icon"><span class="material-icons ${colorClass}">${icon}</span></div>
-                    <div class="wf-details">
+                    <div class="wf-review">
                         <div class="wf-role">
                             <span>${step.role}</span>
                             <div class="flex items-center">${actionsHtml}</div>
@@ -3252,23 +3657,25 @@
     }
 
     function createNewRequest() {
-        const newId = `REQ-2025-${requests.length+1}`.padStart(3,'0');
+        const nextNo = Math.max(0, ...requests.map(r => parseInt(String(r.id).split('-').pop()) || 0)) + 1;
+        const newId = `REQ-2026-${String(nextNo).padStart(3,'0')}`;
         const newReq = {
             id: newId, ticker: '', name: '', status: 'Draft', stepIndex: 0,
-            currLimit: 0, propLimit: 0, purpose: 'New Credit Line', date: new Date().toISOString().split('T')[0],
+            currLimit: 0, propLimit: 0, purpose: 'New Credit Line', date: new Date().toISOString().split('T')[0], maker: currentUser.name,
             typeReason: '', riskAnalysisSubtitle: '',
 			forecast: '', bizDesc: '', risks: '', mitigants: '', recommendation: '', summary: '', files: [],
             finConfig: null,
             finPeriods: [],
             history: WORKFLOW_ROLES.map(role => ({ role, user: USERS.find(u=>u.role===role).name, status: 'Pending', date: null })),
-            isMarketTabHidden: false
+            isMarketTabHidden: false, conditions: []
         };
         newReq.history[0].status = 'Pending';
         requests.push(newReq);
         
         autoAdjustWorkflow(newReq);
-        
-        renderNotebooks();
+
+        // Jump straight into the form; Back returns to the dashboard
+        openRequest(newId, 'dashboard');
     }
     
     function commitSave(silent) {
@@ -3285,7 +3692,7 @@
                  req.purpose = document.getElementById('frm-purpose').value;
                  req.typeReason = document.getElementById('frm-type-reason').value;
                  
-                 if(req.purpose.includes('Add New Entity to Share')) {
+                 if(req.purpose === 'Add New Entity to Share') {
                      req.sharedTickers = document.getElementById('frm-shared-tickers').value;
                      req.sharedPurpose = document.getElementById('frm-shared-purpose').value;
                  }
@@ -3312,7 +3719,7 @@
               
                  req.riskAnalysisSubtitle = document.getElementById('rev-risk-subtitle').value;
 
-                 req.summary = quillSummary.root.innerHTML; 
+                 req.summary = getSummaryHtml(); 
                  req.revPreparedBy = document.getElementById('rev-prepared-by').value;
                  
                  req.name = document.getElementById('rev-header-name').value; 
@@ -3336,12 +3743,23 @@
         }
     }
 
+    function voidRequest(targetId) {
+        const req = requests.find(r => r.id === targetId);
+        if(!req || req.status !== 'Rejected') return;
+        if(confirm('Void this rejected request? It will be removed from Active Requests and kept in History as Cancelled.')) {
+            req.status = 'Cancelled';
+            req.history.push({ role: 'Maker', user: roleUser('Maker'), status: 'Cancelled', date: new Date().toISOString().slice(0,10) + ' ' + new Date().toTimeString().slice(0,5), comment: 'Voided by Maker' });
+            renderNotebooks();
+        }
+    }
+
     // --- Helpers ---
     function switchInternalTab(paneId, tabEl) {
         document.querySelectorAll('.internal-tab').forEach(t => t.classList.remove('active'));
         if(tabEl) tabEl.classList.add('active');
         document.querySelectorAll('.internal-pane').forEach(p => p.classList.remove('active'));
         document.getElementById(`pane-${paneId}`).classList.add('active');
+        if (paneId === 'summary') ensureSummaryEditor();
     }
 
     function sortCustomerMaster(colId) {
@@ -3351,10 +3769,44 @@
         renderCustomerMaster();
     }
 
+    function custFill(id, opts) {
+        const el = document.getElementById(id), cur = el.value;
+        el.innerHTML = '<option value="">All</option>' + opts.map(v => `<option value="${v}">${v}</option>`).join('');
+        el.value = opts.includes(cur) ? cur : '';
+    }
+    function resetCustomerFilters() {
+        ['q','region','sector','domain','am','rating','util'].forEach(k => document.getElementById('cust-filter-' + k).value = '');
+        renderCustomerMaster();
+    }
+
     function renderCustomerMaster() {
         const tbody = document.getElementById('master-table-body');
-        const list = Object.entries(CUSTOMER_DB).map(([ticker, c]) => ({...c, ticker}));
-        
+        let list = Object.entries(CUSTOMER_DB).map(([ticker, c]) => ({...c, ticker}));
+        const total = list.length;
+
+        custFill('cust-filter-q', [...new Set(list.map(c => c.ticker))].sort());
+        custFill('cust-filter-region', [...new Set(list.map(c => c.region))].sort());
+        custFill('cust-filter-sector', [...new Set(list.map(c => c.sector))].sort());
+        custFill('cust-filter-domain', [...new Set(list.map(c => c.domain))].sort());
+        custFill('cust-filter-am', [...new Set(list.map(c => c.am))].sort());
+        custFill('cust-filter-rating', [...new Set(list.map(c => c.rating))].sort());
+
+        const g = k => document.getElementById('cust-filter-' + k).value;
+        const q = g('q'), fRegion = g('region'), fSector = g('sector'), fDomain = g('domain'), fAm = g('am'), fRating = g('rating'), fUtil = g('util');
+        list = list.filter(c => {
+            if (q && c.ticker !== q) return false;
+            if (fRegion && c.region !== fRegion) return false;
+            if (fSector && c.sector !== fSector) return false;
+            if (fDomain && c.domain !== fDomain) return false;
+            if (fAm && c.am !== fAm) return false;
+            if (fRating && c.rating !== fRating) return false;
+            if (fUtil === 'high' && c.util <= 75) return false;
+            if (fUtil === 'mid' && (c.util < 25 || c.util > 75)) return false;
+            if (fUtil === 'low' && c.util >= 25) return false;
+            return true;
+        });
+        document.getElementById('cust-count').innerText = `${list.length} / ${total} customers`;
+
         // Apply Sort
         list.sort((a,b) => {
             let valA = a[custSort.col] || a['ticker']; // fallback for id vs ticker naming
@@ -3390,34 +3842,71 @@
         `).join('');
     }
 
+    function histFill(id, list, allLabel) {
+        const el = document.getElementById(id), cur = el.value;
+        el.innerHTML = `<option value="">${allLabel}</option>` + list.map(v => `<option value="${v}">${v}</option>`).join('');
+        el.value = list.includes(cur) ? cur : '';
+    }
+    function resetHistoricalFilters() {
+        ['ticker','purpose','approver','delta'].forEach(k => document.getElementById('hist-filter-' + k).value = '');
+        document.getElementById('hist-filter-date-from').value = '';
+        document.getElementById('hist-filter-date-to').value = '';
+        renderHistorical();
+    }
+
     function renderHistorical() {
         const thead = document.getElementById('historical-thead');
         const tbody = document.getElementById('historical-list');
-        const fTicker = document.getElementById('hist-filter-ticker').value.toLowerCase();
-        const fPurpose = document.getElementById('hist-filter-purpose').value;
-        const fStatus = document.getElementById('hist-filter-status').value;
 
-        let data = requests.map(r => {
+        let data = requests.filter(r => r.status === 'Approved').map(r => {
              const lastStep = r.history.filter(h => h.status !== 'Pending').pop() || r.history[r.history.length-1];
+             const cur = parseInt(r.currLimit) || 0, prop = parseInt(r.propLimit) || 0;
              return {
                  id: r.id,
                  ticker: r.ticker,
                  company: r.name,
                  purpose: r.purpose,
-                 creditLine: parseInt(r.propLimit),
+                 creditLine: prop,
+                 delta: prop - cur,
+                 created: r.date || '-',
                  finalDate: lastStep.date || '-',
                  approveBy: lastStep.user,
                  status: r.status,
+                 condition: (r.conditions || []).length,
                  rawObj: r
              };
         });
+        const total = data.length;
+
+        // Dynamic dropdown options
+        const uniq = k => [...new Set(data.map(d => d[k]).filter(Boolean))].sort();
+        histFill('hist-filter-ticker', uniq('ticker'), 'All');
+        histFill('hist-filter-purpose', uniq('purpose'), 'All');
+        histFill('hist-filter-approver', uniq('approveBy'), 'All');
+
+        const g = k => document.getElementById('hist-filter-' + k).value;
+        const fTicker = g('ticker'), fPurpose = g('purpose'), fApprover = g('approver'), fDelta = g('delta');
+        const dateFromVal = document.getElementById('hist-filter-date-from').value;
+        const dateToVal = document.getElementById('hist-filter-date-to').value;
+        const from = dateFromVal ? new Date(dateFromVal + 'T00:00:00') : null;
+        const to = dateToVal ? new Date(dateToVal + 'T23:59:59') : null;
 
         data = data.filter(d => {
-            if(fTicker && !d.ticker.toLowerCase().includes(fTicker)) return false;
+            if(fTicker && d.ticker !== fTicker) return false;
             if(fPurpose && d.purpose !== fPurpose) return false;
-            if(fStatus && d.status !== fStatus) return false;
+            if(fApprover && d.approveBy !== fApprover) return false;
+            if(fDelta === 'up' && d.delta <= 0) return false;
+            if(fDelta === 'down' && d.delta >= 0) return false;
+            if(fDelta === 'none' && d.delta !== 0) return false;
+            if(from || to) {
+                const fd = parseD(d.finalDate);
+                if(!fd) return false;
+                if(from && fd < from) return false;
+                if(to && fd > to) return false;
+            }
             return true;
         });
+        document.getElementById('hist-count').innerText = `${data.length} / ${total} records`;
 
         const sortCol = historyConfig.sort.column;
         const sortDir = historyConfig.sort.dir;
@@ -3437,24 +3926,31 @@
         historyConfig.columns.forEach(col => {
             if(!col.visible) return;
             const sortIcon = (col.id === sortCol) ? (sortDir==='asc'?'arrow_drop_up':'arrow_drop_down') : '';
-            headerHtml += `<th onclick="sortHistorical('${col.id}')">${col.label} <span class="material-icons align-middle text-sm">${sortIcon}</span></th>`;
+            headerHtml += `<th onclick="sortHistorical('${col.id}')">${col.label} <span class="material-icons align-middle text-sm">${sortIcon}</span><div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th>`;
         });
-        headerHtml += '<th>Action</th></tr>';
+        headerHtml += '<th>Review<div class="col-resizer" onmousedown="dtInitResize(event, this)" onclick="event.stopPropagation()"></div></th></tr>';
         thead.innerHTML = headerHtml;
+        dtRestoreWidths($d('historical-table'));
 
         if(data.length === 0) {
             tbody.innerHTML = `<tr><td colspan="${historyConfig.columns.filter(c=>c.visible).length + 1}" class="p-4 text-center text-gray-500">No records found.</td></tr>`;
         } else {
             tbody.innerHTML = data.map(row => {
-                let rowHtml = `<tr class="cursor-pointer" onclick="openRequest('${row.id}', 'historical')">`;
+                let rowHtml = `<tr>`;
                 historyConfig.columns.forEach(col => {
                     if(!col.visible) return;
                     let val = row[col.id];
                     if(col.id === 'creditLine') val = '$' + val.toLocaleString();
+                    if(col.id === 'delta') val = (val > 0 ? '+' : '') + money(val);
                     if(col.id === 'status') val = `<span class="status-badge ${val==='Approved'?'st-approved':(val==='Rejected'?'st-rejected':(val==='Cancelled'?'st-cancelled':'st-draft'))}">${val}</span>`;
+                    if(col.id === 'condition') {
+                        val = val > 0
+                            ? `<span class="status-badge st-rejected" style="cursor:pointer;" onclick="openConditionModal('${row.id}')">${val} Condition${val>1?'s':''}</span>`
+                            : `<span class="text-gray-400">None</span>`;
+                    }
                     rowHtml += `<td>${val}</td>`;
                 });
-                rowHtml += `<td><button class="btn btn-ghost btn-sm text-xs">View</button></td></tr>`;
+                rowHtml += `<td><button class="btn btn-ghost btn-sm text-xs" onclick="openRequest('${row.id}', 'historical')">Review</button></td></tr>`;
                 return rowHtml;
             }).join('');
         }
@@ -3577,6 +4073,25 @@
              });
          } catch(e) {
              console.error("Market Data Error", e);
+         } finally {
+             // The external data source is a personal, mutable file whose ticker coverage can
+             // change (or the fetch can simply fail). Fill in any ticker it didn't provide with
+             // a synthetic series so the Market tab is never left with nothing to show.
+             mkt_tickers.forEach(ticker => {
+                 if (mkt_dataByTicker[ticker] && mkt_dataByTicker[ticker].length) return;
+                 const clean = mkt_generateSyntheticSeries(ticker);
+                 mkt_dataByTicker[ticker] = clean;
+                 mkt_meta[ticker] = { shares: mkt_fallbackShares[ticker] || 1e9 };
+                 const findPrice = (d) => { const target = d.getTime(); for (let i = clean.length - 1; i >= 0; i--) { if (clean[i].date.getTime() <= target) return clean[i].price; } return null; };
+                 const calc = (p1, p2) => ((p2 / p1) - 1) * 100;
+                 mkt_perfData.set(ticker, { findPrice, calc, data: clean });
+             });
+             // mkt_loadData() runs async, so if a request was already opened before it resolved,
+             // the Market tab may have been hidden for lack of data. Re-render it now that data exists.
+             if (currentReqId) {
+                 const openReq = requests.find(r => r.id === currentReqId);
+                 if (openReq) { initRequestMarketTab(openReq.ticker); updateMarketTabVisuals(openReq); }
+             }
          }
     }
     
@@ -3768,75 +4283,97 @@
         });
     }
 
+    const YAHOO_NEWS_URL = 'https://raw.githubusercontent.com/andychu221/reuters-news-archive/main/yahoo_news.json';
+    let yahooNewsCache = null, currentNewsList = [];
+    const escHtml = t => String(t ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+    async function loadYahooNews() {
+        if (yahooNewsCache) return yahooNewsCache;
+        const res = await fetch(YAHOO_NEWS_URL);
+        if (!res.ok) throw new Error('News fetch failed');
+        const json = await res.json();
+        yahooNewsCache = (json.news || []).map(n => ({
+            ...n,
+            jsDate: new Date(`${n.Date}T${n.Time || '00:00:00'}`),
+            tickers: String(n.Ticker || '').split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
+        }));
+        return yahooNewsCache;
+    }
+
     async function req_mkt_loadNews(ticker) {
         const listEl = document.getElementById('req-mkt-news-content');
-        listEl.innerHTML = '<p class="p-4 text-gray-500">Loading specific news...</p>';
-        
+        listEl.innerHTML = '<p class="p-4 text-gray-500">Loading news...</p>';
+
         const dateVal = document.getElementById('req-mkt-as-of-date').value;
         const refDate = dateVal ? new Date(dateVal) : new Date();
+        const t = String(ticker || '').toUpperCase();
 
         try {
-            const res = await fetch(`https://raw.githubusercontent.com/andychu221/reuters-news-archive/main/taiwan-stock-news/${ticker}.json`);
-            if(!res.ok) throw new Error("News not found");
-            const json = await res.json();
-            
-            if(json && json.news) {
-                // Process Dates & Filter by refDate
-                let newsItems = json.news.map(n => { 
-                    n.jsDate = new Date(n.Date + ' ' + (n.Time||'')); 
-                    return n;
-                });
-                
-                // Filter news happening on or before refDate (plus one day to cover time diffs)
-                const cutoff = new Date(refDate);
-                cutoff.setDate(cutoff.getDate() + 1);
-                
-                newsItems = newsItems.filter(n => n.jsDate < cutoff);
-                newsItems.sort((a,b) => b.jsDate - a.jsDate);
-                
-                if (newsItems.length === 0) {
-                     listEl.innerHTML = '<p class="p-4">No news found before selected date.</p>';
-                     return;
-                }
+            const all = await loadYahooNews();
+            // A news item can be tagged with several tickers ("NVDA, AMD"); also match "2330" vs "2330.TW"
+            const matched = all.filter(n => n.tickers.some(x => x === t || x === t + '.TW' || x.replace(/\.[A-Z]+$/, '') === t));
 
-                listEl.innerHTML = newsItems.slice(0, 50).map((n, i) => `
-                    <div class="news-item" onclick='showNewsPopup(${JSON.stringify(n).replace(/'/g, "&#39;")})'>
-                        <div class="news-meta">
-                             <span>${n.Date}</span>
-                             <span class="ml-auto">${n.Source || ''}</span>
-                        </div>
-                        <div class="news-title">${n.Title}</div>
-                    </div>
-                `).join('');
-            } else {
-                listEl.innerHTML = '<p class="p-4">No news found.</p>';
+            const cutoff = new Date(refDate);
+            cutoff.setDate(cutoff.getDate() + 1);
+            const items = matched.filter(n => n.jsDate < cutoff).sort((a, b) => b.jsDate - a.jsDate).slice(0, 50);
+
+            if (items.length === 0) {
+                const ds = all.map(n => n.Date).filter(Boolean).sort();
+                const range = ds.length ? ` (archive covers ${ds[0]} – ${ds[ds.length-1]})` : '';
+                listEl.innerHTML = `<p class="p-4 text-gray-500">${matched.length ? 'No news on or before the selected date.' : 'No news found for this ticker.'}${range}</p>`;
+                return;
             }
-        } catch(e) {
-            listEl.innerHTML = '<p class="p-4 text-gray-400">Unable to load news for this ticker.</p>';
+
+            currentNewsList = items;
+            listEl.innerHTML = items.map((n, i) => `
+                <div class="news-item" onclick="showNewsPopup(currentNewsList[${i}])">
+                    <div class="news-meta">
+                        <span>${escHtml(n.Date)} ${escHtml((n.Time || '').slice(0,5))}</span>
+                        <span class="news-tag">${escHtml(n.Source || '')}</span>
+                        <span class="ml-auto">${escHtml(n.Ticker || '')}</span>
+                    </div>
+                    <div class="news-title">${escHtml(n.Title)}</div>
+                </div>`).join('');
+        } catch (e) {
+            listEl.innerHTML = '<p class="p-4 text-gray-400">Unable to load news.</p>';
         }
     }
 
     function showNewsPopup(item) {
+        if (!item) return;
         const modal = document.getElementById('news-content-modal');
-        const header = document.getElementById('popup-news-header');
-        const body = document.getElementById('popup-news-body');
-        
-        header.innerHTML = `
-            <div class="font-bold text-xl">${item.Title}</div>
-            <div class="text-sm text-gray-500 mt-1">${item.Date} ${item.Time||''} | ${item.Source || 'Unknown'}</div>
+        const safeUrl = /^https?:\/\//i.test(item.URL || '') ? item.URL : '';
+
+        document.getElementById('popup-news-header').innerHTML = `
+            <div class="font-bold text-xl">${escHtml(item.Title)}</div>
+            <div class="text-sm text-gray-500 mt-1">${escHtml(item.Date)} ${escHtml(item.Time || '')} | ${escHtml(item.Source || 'Unknown')}</div>
         `;
-        
-        body.innerHTML = `
-            <div class="text-base leading-relaxed whitespace-pre-wrap p-2">${item.Content || 'No content.'}</div>
-            <div class="mt-4 border-t pt-2"><a href="${item.URL}" target="_blank" class="text-blue-600 hover:underline text-sm font-bold">Read Original <span class="material-icons text-xs align-middle">open_in_new</span></a></div>
+        document.getElementById('popup-news-body').innerHTML = `
+            <div class="text-base leading-relaxed whitespace-pre-wrap p-2">${escHtml(item.Content || 'No content.')}</div>
+            ${safeUrl ? `<div class="mt-4 border-t pt-2"><a href="${escHtml(safeUrl)}" target="_blank" rel="noopener" class="text-blue-600 hover:underline text-sm font-bold">Read Original <span class="material-icons text-xs align-middle">open_in_new</span></a></div>` : ''}
         `;
-        
         modal.style.display = 'flex';
     }
 
     function closeNewsPopup(e) {
         if (!e || e.target.id === 'news-content-modal' || e.target.closest('.btn-ghost')) {
             document.getElementById('news-content-modal').style.display = 'none';
+        }
+    }
+
+    function openConditionModal(reqId) {
+        const req = requests.find(r => r.id === reqId);
+        const items = (req && req.conditions) || [];
+        document.getElementById('condition-modal-title').innerText = `${reqId} \u2014 Conditions`;
+        document.getElementById('condition-modal-sub').innerText = req ? `${req.ticker} \u00b7 ${req.name}` : '';
+        document.getElementById('condition-modal-body').innerHTML = items.length
+            ? `<ul style="list-style:disc;padding-left:20px;display:flex;flex-direction:column;gap:8px;">${items.map(c => `<li style="font-size:13px;color:#374151;">${c.text}${c.due ? ` <span style="color:#9ca3af;font-size:11px;">(by ${c.due})</span>` : ''}</li>`).join('')}</ul>`
+            : `<div class="text-sm text-gray-500">No conditions attached.</div>`;
+        document.getElementById('condition-modal').style.display = 'flex';
+    }
+    function closeConditionModal(e) {
+        if (!e || e.target.id === 'condition-modal' || e.target.closest('.btn-ghost')) {
+            document.getElementById('condition-modal').style.display = 'none';
         }
     }
 
